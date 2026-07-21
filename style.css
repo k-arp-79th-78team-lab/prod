@@ -4,23 +4,28 @@
   font-style: normal;
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  background-color: #f7f7f7;
-  color: #111;
+:root {
+  color-scheme: light;
   font-family: "Noto Sans JP", sans-serif;
   font-weight: 400;
-  font-style: normal;
+  background: #f7f7f7;
+  color: #111;
 }
 
-.content {
-  width: min(100%, 1080px);
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 20px;
+* {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  line-height: 1.6;
+  background-color: #f7f7f7;
+  padding-bottom: 72px;
 }
 
 button,
@@ -28,15 +33,70 @@ input {
   font: inherit;
 }
 
-/* 修正: 選択肢を横並びにするためのラッパー */
+.content {
+  width: min(100%, 1080px);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+}
+
+input#pid {
+  flex: 1 1 220px;
+  min-width: 180px;
+  padding: 12px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.big-button {
+  appearance: none;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 22px;
+  background-color: #222;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.big-button:hover,
+.big-button:focus-visible {
+  background-color: #111;
+  transform: translateY(-1px);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.question-block {
+  margin-top: 28px;
+  padding: 18px 16px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e1e1e1;
+}
+
+.question-block h3 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+}
+
 .choices-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
 }
 
-/* 修正: 選択肢自体を横方向レイアウトに変更 */
 .choicebox {
   display: flex;
   flex-direction: row;
@@ -45,11 +105,21 @@ input {
   border: 2px solid rgb(33, 33, 33);
   cursor: pointer;
   min-width: 140px;
-  background-color: white;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  background-color: #fff;
+  transition: background-color 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
-/* 修正: 選択肢の左にチェックボックス風の枠を追加 */
+.choicebox:not(.disabled):hover,
+.choicebox:not(.disabled):focus-visible {
+  background-color: #f3f3f3;
+  transform: translateY(-1px);
+}
+
+.choicebox.disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .checkFrame {
   width: 20px;
   height: 20px;
@@ -60,6 +130,18 @@ input {
 
 .choiceText {
   white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (max-width: 760px) {
