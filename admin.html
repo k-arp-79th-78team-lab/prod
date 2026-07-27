@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理者ページ</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="footer.css">
+</head>
+<body>
+  <main class="content">
+    <h1>管理者ページ</h1>
+    <p>参加者IDの割り当て状況を確認し、必要に応じてリセットできます。</p>
+
+    <button id="refresh-status" class="big-button" type="button">状態を更新</button>
+    <button id="assign-ids" class="big-button" type="button">IDをランダム割り当て</button>
+    <button id="reset-assignments" class="big-button" type="button">登録・割り当てをリセット</button>
+
+    <div id="status" style="margin-top: 20px;"></div>
+  </main>
+
+  <script>
+    const statusBox = document.getElementById('status');
+
+    async function loadStatus() {
+      const response = await fetch('/assignments-status');
+      const data = await response.json();
+      statusBox.innerHTML = `
+        <p>登録済みアカウント数: ${data.registeredCount}</p>
+        <p>割り当て済み数: ${data.assignedCount}</p>
+        <p>未割り当て数: ${data.pendingCount}</p>
+        <p>100〜199: ${data.lowCount}</p>
+        <p>200〜299: ${data.highCount}</p>
+      `;
+    }
+
+    document.getElementById('refresh-status').addEventListener('click', loadStatus);
+    document.getElementById('assign-ids').addEventListener('click', async () => {
+      if (!confirm('登録済みアカウントへIDを均等に割り当てますか？')) {
+        return;
+      }
+
+      const response = await fetch('/admin/assign-ids', { method: 'POST' });
+      const data = await response.json();
+      if (data.status === 'ok') {
+        alert('IDを割り当てました。');
+        loadStatus();
+      } else {
+        alert(data.message || '割り当てに失敗しました。');
+      }
+    });
+    document.getElementById('reset-assignments').addEventListener('click', async () => {
+      if (!confirm('登録・割り当て情報をリセットしますか？')) {
+        return;
+      }
+
+      const response = await fetch('/admin/reset-assignments', { method: 'POST' });
+      const data = await response.json();
+      if (data.status === 'ok') {
+        alert('登録・割り当て情報をリセットしました。');
+        loadStatus();
+      }
+    });
+
+    loadStatus();
+  </script>
+</body>
+</html>

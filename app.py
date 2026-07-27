@@ -1,5 +1,6 @@
 import json
 import os
+import random
 from csv import writer as csv_writer
 from io import StringIO
 
@@ -10,6 +11,79 @@ from google.oauth2.service_account import Credentials
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
+
+ASSIGNMENTS_FILE = 'assignments.json'
+REGISTERED_ACCOUNTS_FILE = 'registered_accounts.json'
+
+
+def load_assignments():
+    """参加者IDの割り当て情報を読み込みます。"""
+    if not os.path.exists(ASSIGNMENTS_FILE):
+        return {}
+
+    try:
+        with open(ASSIGNMENTS_FILE, 'r', encoding='utf-8') as handle:
+            data = json.load(handle)
+            return data if isinstance(data, dict) else {}
+    except Exception as error:
+        print(f'割り当て情報読み込みエラー: {error}')
+        return {}
+
+
+def save_assignments(assignments):
+    """参加者IDの割り当て情報を保存します。"""
+    with open(ASSIGNMENTS_FILE, 'w', encoding='utf-8') as handle:
+        json.dump(assignments, handle, ensure_ascii=False, indent=2)
+
+
+def load_registered_accounts():
+    """登録済みアカウント一覧を読み込みます。"""
+    if not os.path.exists(REGISTERED_ACCOUNTS_FILE):
+        return []
+
+    try:
+        with open(REGISTERED_ACCOUNTS_FILE, 'r', encoding='utf-8') as handle:
+            data = json.load(handle)
+            return data if isinstance(data, list) else []
+    except Exception as error:
+        print(f'登録アカウント読み込みエラー: {error}')
+        return []
+
+
+def save_registered_accounts(accounts):
+    """登録済みアカウント一覧を保存します。"""
+    with open(REGISTERED_ACCOUNTS_FILE, 'w', encoding='utf-8') as handle:
+        json.dump(accounts, handle, ensure_ascii=False, indent=2)
+
+
+def assign_balanced_ids(register_emails):
+    """登録済みメールアドレスに 100〜199 と 200〜299 を均等にランダム割り当てします。"""
+    if not register_emails:
+        return {}
+
+    if len(register_emails) % 2 != 0:
+        raise ValueError('登録アカウント数が偶数でないため、均等割り当てできません。')
+
+    shuffled_emails = list(register_emails)
+    random.shuffle(shuffled_emails)
+
+    half = len(shuffled_emails) // 2
+    low_emails = shuffled_emails[:half]
+    high_emails = shuffled_emails[half:]
+
+    low_ids = list(range(100, 200))
+    high_ids = list(range(200, 300))
+    random.shuffle(low_ids)
+    random.shuffle(high_ids)
+
+    assignments = {}
+    for email, participant_id in zip(low_emails, low_ids[:len(low_emails)]):
+        assignments[email] = str(participant_id)
+
+    for email, participant_id in zip(high_emails, high_ids[:len(high_emails)]):
+        assignments[email] = str(participant_id)
+
+    return assignments
 
 # --- Google Sheets 連携 ---
 
@@ -83,6 +157,81 @@ def static_files(path):
     if os.path.isfile(path):
         return send_from_directory('.', path)
     return 'File not found', 404
+
+
+@app.post('/register-account')
+def register_account():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
+
+    registered_accounts = load_registered_accounts()
+    if email not in registered_accounts:
+        registered_accounts.append(email)
+        save_registered_accounts(registered_accounts)
+
+    assignments = load_assignments()
+    if email in assignments:
+        return jsonify({'status': 'ok', 'participantId': assignments[email], 'assigned': True, 'pending': False})
+
+    return jsonify({'status': 'ok', 'participantId': None, 'assigned': False, 'pending': True, 'registeredCount': len(registered_accounts)})
+
+
+@app.get('/assignments-status')
+def assignments_status():
+    assignments = load_assignments()
+    registered_accounts = load_registered_accounts()
+    assigned_ids = [int(value) for value in assignments.values() if str(value).isdigit()]
+    low_count = sum(1 for value in assigned_ids if 100 <= value <= 199)
+    high_count = sum(1 for value in assigned_ids if 200 <= value <= 299)
+
+    return jsonify({
+        'registeredCount': len(registered_accounts),
+        'assignedCount': len(assignments),
+        'pendingCount': max(0, len(registered_accounts) - len(assignments)),
+        'lowCount': low_count,
+        'highCount': high_count,
+        'remaining': max(0, len(registered_accounts) - len(assignments))
+    })
+
+
+@app.post('/admin/register-email')
+def admin_register_email():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
+
+    registered_accounts = load_registered_accounts()
+    if email not in registered_accounts:
+        registered_accounts.append(email)
+        save_registered_accounts(registered_accounts)
+
+    return jsonify({'status': 'ok', 'registeredCount': len(registered_accounts)})
+
+
+@app.post('/admin/assign-ids')
+def admin_assign_ids():
+    registered_accounts = load_registered_accounts()
+    if not registered_accounts:
+        return jsonify({'status': 'error', 'message': '登録済みアカウントがありません。'}), 400
+
+    if len(registered_accounts) % 2 != 0:
+        return jsonify({'status': 'error', 'message': '登録アカウント数が偶数でないため、均等割り当てできません。'}), 400
+
+    assignments = assign_balanced_ids(registered_accounts)
+    save_assignments(assignments)
+    return jsonify({'status': 'ok', 'assignments': assignments})
+
+
+@app.post('/admin/reset-assignments')
+def reset_assignments():
+    save_assignments({})
+    save_registered_accounts([])
+    return jsonify({'status': 'ok'})
 
 
 @app.post('/submit')

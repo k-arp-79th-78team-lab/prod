@@ -64,6 +64,7 @@ let pidSubmit = null;
 let startButton = null;
 let quizDiv = null;
 let finishButton = null;
+let conditionStatus = null;
 
 function normalizePid(value) {
   if (typeof value !== 'string') {
@@ -101,10 +102,10 @@ function isValidPid(value) {
 
 function getConditionFormID(pid) { //条件を決める
   const id = Number(pid);
-  if (id >= 1 && id <= 50) return { learnType: 'analog', answerType: 'analog' }; //1~100は試験用のpid
-  if (id >= 51 && id <= 100) return { learnType: 'digital', answerType: 'digital' };
-  if (id >= 101 && id <= 200) return { learnType: 'analog', answerType: 'analog' }; //ここからが本番用
-  if (id >= 201 && id <= 300) return { learnType: 'digital', answerType: 'digital' };
+  if (id >= 1 && id <= 49) return { learnType: 'analog', answerType: 'analog' }; //1~100は試験用のpid
+  if (id >= 50 && id <= 99) return { learnType: 'digital', answerType: 'digital' };
+  if (id >= 100 && id <= 199) return { learnType: 'analog', answerType: 'analog' }; //ここからが本番用
+  if (id >= 200 && id <= 299) return { learnType: 'digital', answerType: 'digital' };
   return null;
 }
 
@@ -139,6 +140,26 @@ function showState(stateName) {
 
   if (stateName === 'pid') {
     pidInput?.focus();
+  }
+}
+
+function updateConditionStatus() {
+  if (!conditionStatus) {
+    return;
+  }
+
+  if (!participantId || !learnType || !answerType) {
+    conditionStatus.textContent = 'ログイン後に割り当てられた参加者IDを読み込みます。';
+    return;
+  }
+
+  if (answerType === 'analog') {
+    conditionStatus.textContent = `割り当て済みID ${participantId} の条件: analog（回答開始後は終了画面へ進みます）。`;
+    return;
+  }
+
+  if (answerType === 'digital') {
+    conditionStatus.textContent = `割り当て済みID ${participantId} の条件: digital（回答開始後に問題が表示されます）。`;
   }
 }
 
@@ -362,6 +383,7 @@ function initPage() {
   startButton = document.getElementById('start');
   quizDiv = document.getElementById('quiz');
   finishButton = document.getElementById('finish');
+  conditionStatus = document.getElementById('condition-status');
 
   const hasPidFlow = Boolean(pidInputArea || pidInput || pidSubmit);
 
@@ -371,17 +393,18 @@ function initPage() {
 
   if (startButton) {
     startButton.addEventListener('click', () => {
-      if (!answerType || !participantId || !learnType) {
-        if (hasPidFlow) {
-          alert('参加者IDを先に入力してください。');
-          return;
-        }
-
-        if (!setParticipantFromPid('1')) {
-          alert('参加者情報の初期化に失敗しました。');
-          return;
-        }
+      const pidFromUrl = parsePidFromUrl();
+      if (pidFromUrl && setParticipantFromPid(pidFromUrl)) {
+        participantId = normalizePid(pidFromUrl);
+      } else if (hasPidFlow && (!answerType || !participantId || !learnType)) {
+        alert('参加者IDを先に入力してください。');
+        return;
+      } else if (!hasPidFlow && (!answerType || !participantId || !learnType)) {
+        alert('参加者IDが設定されていません。ログインし直してください。');
+        return;
       }
+
+      updateConditionStatus();
 
       results = [];
       testStart = Date.now();
@@ -413,7 +436,14 @@ function initPage() {
     return;
   }
 
-  showState('start');
+  const pidFromUrl = parsePidFromUrl();
+  if (pidFromUrl && setParticipantFromPid(pidFromUrl)) {
+    updateConditionStatus();
+    showState('start');
+  } else {
+    updateConditionStatus();
+    showState('start');
+  }
 }
 
 if (document.readyState === 'loading') {
