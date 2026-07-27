@@ -25,9 +25,13 @@
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
+    const authDomain = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? 'k-arp-79th-78team-c140d.firebaseapp.com'
+        : window.location.hostname;
+
     const firebaseConfig = {
         apiKey: "AIzaSyC5i2GrXI1CF33SON2TZPAn7qT4SuG28xc",
-        authDomain: "k-arp-79th-78team-c140d.firebaseapp.com",
+        authDomain,
         projectId: "k-arp-79th-78team-c140d",
         storageBucket: "k-arp-79th-78team-c140d.firebasestorage.app",
         messagingSenderId: "903991667651",
@@ -36,7 +40,12 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
+    let analytics = null;
+    try {
+        analytics = getAnalytics(app);
+    } catch (error) {
+        console.warn('Analytics initialization skipped.', error);
+    }
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     const loginButton = document.getElementById('login-button');
@@ -48,11 +57,8 @@
         return path.startsWith('/') ? path : `/${path}`;
     };
     const appUrl = (path) => {
-        const configuredBase = (window.__APP_API_BASE_URL__ || '').trim().replace(/\/$/, '');
-        if (configuredBase) {
-            return `${configuredBase}${path.startsWith('/') ? path : `/${path}`}`;
-        }
-        return path.startsWith('/') ? path : `/${path}`;
+        const pathValue = path.startsWith('/') ? path : `/${path}`;
+        return pathValue;
     };
 
     if (loginButton) {
