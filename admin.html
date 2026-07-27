@@ -16,6 +16,15 @@
     <button id="assign-ids" class="big-button" type="button">IDをランダム割り当て</button>
     <button id="reset-assignments" class="big-button" type="button">登録・割り当てをリセット</button>
 
+    <div style="margin-top: 24px;">
+      <h2>手動割り当て</h2>
+      <label for="manual-email">メールアドレス</label>
+      <input id="manual-email" type="email" style="display:block; width:100%; max-width:320px; margin:8px 0 12px; padding:10px;" />
+      <label for="manual-participant-id">参加者ID</label>
+      <input id="manual-participant-id" type="number" min="100" max="299" style="display:block; width:100%; max-width:160px; margin:8px 0 12px; padding:10px;" />
+      <button id="manual-assign" class="big-button" type="button">手動で割り当て</button>
+    </div>
+
     <div id="status" style="margin-top: 20px;"></div>
   </main>
 
@@ -35,6 +44,30 @@
     }
 
     document.getElementById('refresh-status').addEventListener('click', loadStatus);
+    document.getElementById('manual-assign').addEventListener('click', async () => {
+      const email = document.getElementById('manual-email').value.trim().toLowerCase();
+      const participantId = document.getElementById('manual-participant-id').value.trim();
+
+      if (!email || !participantId) {
+        alert('メールアドレスと参加者IDを入力してください。');
+        return;
+      }
+
+      const response = await fetch('/admin/manual-assign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, participantId })
+      });
+      const data = await response.json();
+      if (data.status === 'ok') {
+        alert(`ID ${data.participantId} を割り当てました。`);
+        document.getElementById('manual-email').value = '';
+        document.getElementById('manual-participant-id').value = '';
+        loadStatus();
+      } else {
+        alert(data.message || '手動割り当てに失敗しました。');
+      }
+    });
     document.getElementById('assign-ids').addEventListener('click', async () => {
       if (!confirm('登録済みアカウントへIDを均等に割り当てますか？')) {
         return;

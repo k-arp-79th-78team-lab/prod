@@ -227,6 +227,34 @@ def admin_assign_ids():
     return jsonify({'status': 'ok', 'assignments': assignments})
 
 
+@app.post('/admin/manual-assign')
+def admin_manual_assign():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    participant_id = (data.get('participantId') or '').strip()
+
+    if not email or not participant_id:
+        return jsonify({'status': 'error', 'message': 'メールアドレスと参加者IDが必要です。'}), 400
+
+    if not participant_id.isdigit():
+        return jsonify({'status': 'error', 'message': '参加者IDは数字で指定してください。'}), 400
+
+    participant_id_number = int(participant_id)
+    if not (100 <= participant_id_number <= 299):
+        return jsonify({'status': 'error', 'message': '参加者IDは100〜299の範囲で指定してください。'}), 400
+
+    assignments = load_assignments()
+    assignments[email] = str(participant_id_number)
+    save_assignments(assignments)
+
+    registered_accounts = load_registered_accounts()
+    if email not in registered_accounts:
+        registered_accounts.append(email)
+        save_registered_accounts(registered_accounts)
+
+    return jsonify({'status': 'ok', 'participantId': participant_id_number})
+
+
 @app.post('/admin/reset-assignments')
 def reset_assignments():
     save_assignments({})
