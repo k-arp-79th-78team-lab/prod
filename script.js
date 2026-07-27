@@ -54,6 +54,7 @@ let answerType = null;
 let condition = null;
 let quiz = [];
 let results = [];
+let startTimes = {};
 let testStart = null;
 let choiceHandlersBound = false;
 let pidIsComposing = false;
@@ -72,6 +73,10 @@ function getApiUrl(path) {
     return `${configuredBase}${path.startsWith('/') ? path : `/${path}`}`;
   }
   return path.startsWith('/') ? path : `/${path}`;
+}
+
+function getAppUrl(path) {
+  return getApiUrl(path);
 }
 
 function normalizePid(value) {
@@ -240,6 +245,7 @@ function generateChoices(correctLabel) {
 }
 
 function initializeQuiz() {
+  startTimes = {};
   quiz = QUESTIONS.map((question) => ({
     id: question.id,
     text: question.text,
@@ -251,6 +257,10 @@ function initializeQuiz() {
 function renderQuestions() {
   if (!quizDiv) {
     return;
+  }
+
+  if (!quiz.length) {
+    initializeQuiz();
   }
 
   quizDiv.innerHTML = '';
@@ -348,6 +358,10 @@ function finishSession() {
     return;
   }
 
+  if (!testStart) {
+    testStart = Date.now();
+  }
+
   const payload = {
     participantId,
     learnType,
@@ -373,7 +387,7 @@ function finishSession() {
       return response.json();
     })
     .then(() => {
-      window.location.assign('finish.html');
+      window.location.assign(getAppUrl('/finish'));
     })
     .catch((error) => {
       console.error(`送信エラー: ${error.message || error}`);
