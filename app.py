@@ -260,8 +260,8 @@ def admin_manual_assign():
         return jsonify({'status': 'error', 'message': '参加者IDは数字で指定してください。'}), 400
 
     participant_id_number = int(participant_id)
-    if not (100 <= participant_id_number <= 299):
-        return jsonify({'status': 'error', 'message': '参加者IDは100〜299の範囲で指定してください。'}), 400
+    if not (0 <= participant_id_number <= 299):
+        return jsonify({'status': 'error', 'message': '参加者IDは0〜299の範囲で指定してください。'}), 400
 
     assignments = load_assignments()
     assignments[email] = str(participant_id_number)
