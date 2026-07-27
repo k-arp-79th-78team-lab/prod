@@ -14,17 +14,13 @@
     <div class="login-container">
         <h1>ご参加いただきありがとうございます。</h1>
         <p>参加者の方は，Googleでログインしてください。</p>
-        <button id="login-button" class="big-button">Googleでログイン</button>
+        <button id="login-button" class="big-button" type="button">Googleでログイン</button>
     </div>
     <script type="module">
-    // Import the functions you need from the SDKs you need
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
-    // TODO: Add SDKs for Firebase products that you want to use
-    // https://firebase.google.com/docs/web/setup#available-libraries
+    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
-    // Your web app's Firebase configuration
-    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
     const firebaseConfig = {
         apiKey: "AIzaSyC5i2GrXI1CF33SON2TZPAn7qT4SuG28xc",
         authDomain: "k-arp-79th-78team-c140d.firebaseapp.com",
@@ -33,11 +29,31 @@
         messagingSenderId: "903991667651",
         appId: "1:903991667651:web:ce3c14fa655fd234062b76",
         measurementId: "G-H6DMRGCCB8"
-        };
+    };
 
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const analytics = getAnalytics(app);
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    const loginButton = document.getElementById('login-button');
+
+    if (loginButton) {
+        loginButton.addEventListener('click', async () => {
+            loginButton.disabled = true;
+            loginButton.textContent = 'ログイン処理中...';
+
+            try {
+                const result = await signInWithPopup(auth, provider);
+                console.log('Google login successful', result.user.displayName);
+                window.location.href = 'test.html';
+            } catch (error) {
+                console.error('Google login failed', error);
+                alert('ログインに失敗しました。しばらくしてからもう一度お試しください。');
+                loginButton.disabled = false;
+                loginButton.textContent = 'Googleでログイン';
+            }
+        });
+    }
     </script>
 </body>
 </html>

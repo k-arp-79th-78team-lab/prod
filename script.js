@@ -363,12 +363,24 @@ function initPage() {
   quizDiv = document.getElementById('quiz');
   finishButton = document.getElementById('finish');
 
-  bindPidSubmit();
+  const hasPidFlow = Boolean(pidInputArea || pidInput || pidSubmit);
+
+  if (hasPidFlow) {
+    bindPidSubmit();
+  }
+
   if (startButton) {
     startButton.addEventListener('click', () => {
       if (!answerType || !participantId || !learnType) {
-        alert('参加者IDを先に入力してください。');
-        return;
+        if (hasPidFlow) {
+          alert('参加者IDを先に入力してください。');
+          return;
+        }
+
+        if (!setParticipantFromPid('1')) {
+          alert('参加者情報の初期化に失敗しました。');
+          return;
+        }
       }
 
       results = [];
@@ -391,12 +403,17 @@ function initPage() {
     finishButton.addEventListener('click', finishSession);
   }
 
-  const pidFromUrl = parsePidFromUrl();
-  if (pidFromUrl && setParticipantFromPid(pidFromUrl)) {
-    showState('start');
-  } else {
-    showState('pid');
+  if (hasPidFlow) {
+    const pidFromUrl = parsePidFromUrl();
+    if (pidFromUrl && setParticipantFromPid(pidFromUrl)) {
+      showState('start');
+    } else {
+      showState('pid');
+    }
+    return;
   }
+
+  showState('start');
 }
 
 if (document.readyState === 'loading') {
