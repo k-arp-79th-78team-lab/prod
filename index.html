@@ -40,23 +40,6 @@
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
     </script>
-
-    <section id="pid-input-area">
-      <h3>参加者IDを入力してください</h3>
-      <div class="input-row">
-        <label for="pid" class="visually-hidden">参加者ID</label>
-        <input id="pid" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="参加者IDを入力">
-        <button id="pid-submit" type="button" class="big-button">送信</button>
-      </div>
-    </section>
-
-    <button id="start" type="button" class="big-button hidden">回答開始</button>
-    <section id="quiz" class="hidden" aria-live="polite"></section>
-    <button id="finish" type="button" class="big-button hidden">回答終了</button>
-  </main>
-
-  <script src="script.js"></script>
-
   <footer class="site-footer">
     <p>Copyright © 2026 神奈川県立鎌倉高等学校 K-ARP 79期78班 All Rights Reserved.</p>
   </footer>
