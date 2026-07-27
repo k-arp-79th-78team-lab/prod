@@ -36,6 +36,13 @@
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
     const loginButton = document.getElementById('login-button');
+    const apiUrl = (path) => {
+        const configuredBase = (window.__APP_API_BASE_URL__ || '').trim().replace(/\/$/, '');
+        if (configuredBase) {
+            return `${configuredBase}${path.startsWith('/') ? path : `/${path}`}`;
+        }
+        return path.startsWith('/') ? path : `/${path}`;
+    };
 
     if (loginButton) {
         loginButton.addEventListener('click', async () => {
@@ -44,7 +51,7 @@
 
             try {
                 const result = await signInWithPopup(auth, provider);
-                const response = await fetch('/register-account', {
+                const response = await fetch(apiUrl('/register-account'), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: result.user.email })
@@ -60,7 +67,7 @@
                     window.location.href = `test.html?pid=${encodeURIComponent(payload.participantId)}`;
                 } else {
                     alert('登録は完了しました。管理者が割り当てを実行するまでお待ちください。');
-                    window.location.href = 'index.html';
+                    window.location.href = '/';
                 }
             } catch (error) {
                 console.error('Google login failed', error);

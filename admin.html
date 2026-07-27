@@ -30,9 +30,16 @@
 
   <script>
     const statusBox = document.getElementById('status');
+    const apiUrl = (path) => {
+      const configuredBase = (window.__APP_API_BASE_URL__ || '').trim().replace(/\/$/, '');
+      if (configuredBase) {
+        return `${configuredBase}${path.startsWith('/') ? path : `/${path}`}`;
+      }
+      return path.startsWith('/') ? path : `/${path}`;
+    };
 
     async function loadStatus() {
-      const response = await fetch('/assignments-status');
+      const response = await fetch(apiUrl('/assignments-status'));
       const data = await response.json();
       statusBox.innerHTML = `
         <p>登録済みアカウント数: ${data.registeredCount}</p>
@@ -53,7 +60,7 @@
         return;
       }
 
-      const response = await fetch('/admin/manual-assign', {
+      const response = await fetch(apiUrl('/admin/manual-assign'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, participantId })
@@ -73,7 +80,7 @@
         return;
       }
 
-      const response = await fetch('/admin/assign-ids', { method: 'POST' });
+      const response = await fetch(apiUrl('/admin/assign-ids'), { method: 'POST' });
       const data = await response.json();
       if (data.status === 'ok') {
         alert('IDを割り当てました。');
@@ -87,7 +94,7 @@
         return;
       }
 
-      const response = await fetch('/admin/reset-assignments', { method: 'POST' });
+      const response = await fetch(apiUrl('/admin/reset-assignments'), { method: 'POST' });
       const data = await response.json();
       if (data.status === 'ok') {
         alert('登録・割り当て情報をリセットしました。');

@@ -66,6 +66,14 @@ let quizDiv = null;
 let finishButton = null;
 let conditionStatus = null;
 
+function getApiUrl(path) {
+  const configuredBase = (window.__APP_API_BASE_URL__ || '').trim().replace(/\/$/, '');
+  if (configuredBase) {
+    return `${configuredBase}${path.startsWith('/') ? path : `/${path}`}`;
+  }
+  return path.startsWith('/') ? path : `/${path}`;
+}
+
 function normalizePid(value) {
   if (typeof value !== 'string') {
     return '';
@@ -351,7 +359,7 @@ function finishSession() {
     timestamp: new Date().toISOString()
   };
 
-  fetch('/submit', {
+  fetch(getApiUrl('/submit'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

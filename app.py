@@ -10,7 +10,7 @@ from flask_cors import CORS
 from google.oauth2.service_account import Credentials
 
 app = Flask(__name__, static_folder='.')
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 ASSIGNMENTS_FILE = 'assignments.json'
 REGISTERED_ACCOUNTS_FILE = 'registered_accounts.json'
@@ -150,6 +150,26 @@ def health():
 @app.get('/')
 def home():
     return send_from_directory('.', 'index.html')
+
+
+@app.get('/login')
+def login_page():
+    return send_from_directory('.', 'login.html')
+
+
+@app.get('/test')
+def test_page():
+    return send_from_directory('.', 'test.html')
+
+
+@app.get('/admin')
+def admin_page():
+    return send_from_directory('.', 'admin.html')
+
+
+@app.get('/finish')
+def finish_page():
+    return send_from_directory('.', 'finish.html')
 
 
 @app.get('/<path:path>')
