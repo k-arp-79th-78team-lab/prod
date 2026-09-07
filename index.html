@@ -23,7 +23,7 @@
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, getRedirectResult, signInWithRedirect } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC5i2GrXI1CF33SON2TZPAn7qT4SuG28xc",
@@ -56,21 +56,15 @@
         return new URL(path, document.baseURI).href;
     };
 
-    if (loginButton) {
-        loginButton.addEventListener('click', async () => {
-            loginButton.disabled = true;
-            loginButton.textContent = 'ログイン処理中...';
-
-            try {
-                const result = await signInWithPopup(auth, provider);
-                const idToken = await result.user.getIdToken(true);
-                const response = await fetch(apiUrl('/register-account'), {
+    async function registerAccount(user) {
+        const idToken = await user.getIdToken(true);
+        const response = await fetch(apiUrl('/register-account'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${idToken}`
                     },
-                    body: JSON.stringify({ displayName: result.user.displayName || '' })
+                    body: JSON.stringify({ displayName: user.displayName || '' })
                 });
 
                 const payload = await response.json();
@@ -78,25 +72,45 @@
                     throw new Error(`HTTP ${response.status}: ${payload.message || '登録に失敗しました。'}`);
                 }
 
-                console.log('Google login successful', result.user.displayName);
+                console.log('Google login successful', user.displayName);
                 if (payload.participantId) {
                     window.location.href = appUrl(`test.html?pid=${encodeURIComponent(payload.participantId)}`);
                 } else {
                     document.querySelector('.login-container').innerHTML = `
                         <h1>登録が完了しました</h1>
-                        <p>${result.user.displayName || result.user.email} さんの登録を受け付けました。</p>
+                        <p>${user.displayName || user.email} さんの登録を受け付けました。</p>
                         <p>管理者が参加者IDを割り当てるまで、このページを閉じずにお待ちください。</p>
                         <p>割り当て後は、もう一度このページでログインしてください。</p>
                     `;
                 }
+    }
+
+    if (loginButton) {
+        loginButton.addEventListener('click', async () => {
+            loginButton.disabled = true;
+            loginButton.textContent = 'Googleログインへ移動しています...';
+            try {
+                await signInWithRedirect(auth, provider);
             } catch (error) {
-                console.error('Google login failed', error);
-                alert(error.message || 'ログインに失敗しました。しばらくしてからもう一度お試しください。');
+                console.error('Google login redirect failed', error);
+                alert(error.message || 'ログイン画面を開けませんでした。');
                 loginButton.disabled = false;
                 loginButton.textContent = 'Googleでログイン';
             }
         });
     }
+
+    getRedirectResult(auth).then((result) => {
+        if (!result || !result.user) return;
+        loginButton.disabled = true;
+        loginButton.textContent = '登録処理中...';
+        return registerAccount(result.user);
+    }).catch((error) => {
+        console.error('Google login result failed', error);
+        alert(error.message || 'ログイン結果を処理できませんでした。');
+        loginButton.disabled = false;
+        loginButton.textContent = 'Googleでログイン';
+    });
     </script>
   <footer class="site-footer">
     <p>Copyright © 2026 神奈川県立鎌倉高等学校 K-ARP 79期78班 All Rights Reserved.</p>
