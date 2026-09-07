@@ -76,7 +76,7 @@ function getApiUrl(path) {
 }
 
 function getAppUrl(path) {
-  return getApiUrl(path);
+  return new URL(path, document.baseURI).href;
 }
 
 function normalizePid(value) {
