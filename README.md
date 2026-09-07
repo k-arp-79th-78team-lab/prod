@@ -37,18 +37,16 @@ Heroku / Render などでは `Procfile` を使用して起動できます。
 gunicorn app:app
 ```
 
-### Render での公開
+### Cloudflare + Render での公開
+
+Flask は Cloudflare Pages では実行できないため、Render をアプリ実行基盤、Cloudflare を DNS と HTTPS プロキシとして使用します。
 
 1. Render の Web Service にこのリポジトリを接続します。
-2. `gunicorn app:app` を起動コマンドとして設定します。
-3. 生成された Render URL をブラウザで開き、必要に応じてフロントエンド側で API のベース URL を設定します。
+2. 起動コマンドを `gunicorn app:app` に設定します。
+3. Render の Custom Domains に `karp-79th-78team.com` を追加し、表示された検証値を Cloudflare DNS に登録します。
+4. Cloudflare DNS で `karp-79th-78team.com` を Render の指定先へ CNAME 登録し、プロキシを有効にします。
+5. `https://karp-79th-78team.com/health` が `ok` を返すことを確認します。
 
-フロントエンドの HTML から Render のバックエンドを使う場合、ページ読み込み前に次のように設定してください。
+HTML/JS/API はすべて同じ本番ドメインから提供するため、ログインや回答送信は相対 URL で動作します。Cloudflare 側では `/submit`、`/register-account`、`/admin/*` などの API をキャッシュしない設定にしてください。
 
-```html
-<script>
-  window.__APP_API_BASE_URL__ = 'https://<your-render-service>.onrender.com';
-</script>
-```
-
-この設定を入れると、ログインや回答送信などの API 呼び出しが Render 側に向きます。
+Cloudflare の DNS を使わず Render の URL を直接使う場合は、環境変数 `CORS_ORIGINS` に許可する URL をカンマ区切りで指定してください。
