@@ -5,6 +5,10 @@
 # Google Sheets認証ファイル
 service_account.json
 
+# Firebase Admin SDK認証ファイル
+firebase-service-account.json
+firebase-adminsdk-*.json
+
 # Python
 __pycache__/
 *.py[cod]
