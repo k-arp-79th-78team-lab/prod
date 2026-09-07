@@ -27,7 +27,22 @@ python app.py
 
 - `GOOGLE_SHEET_ID`: Google Sheets のスプレッドシート ID
 - `SERVICE_ACCOUNT_JSON`: JSON 形式のサービスアカウント認証情報（ローカルに `service_account.json` がない場合）
+- `FIREBASE_SERVICE_ACCOUNT_JSON`: Firebase Admin SDK 用サービスアカウントJSON。`SERVICE_ACCOUNT_JSON` と同じFirebaseプロジェクトのサービスアカウントを利用する場合は省略できます
 - `PORT`: アプリを起動するポート（デフォルト 5000）
+
+管理者ページは `/admin` で開き、Firebase Authの `admin: true` カスタムクレームを持つアカウントだけが操作できます。Render側で管理者メール一覧を設定する必要はありません。
+
+Firebaseコンソールにはカスタムクレームを直接編集する画面がないため、Firebase Admin SDKで管理者を指定します。FirebaseサービスアカウントJSONを用意したうえで、次のような一度限りのスクリプトを実行してください。
+
+```python
+import firebase_admin
+from firebase_admin import auth, credentials
+
+firebase_admin.initialize_app(credentials.Certificate('firebase-service-account.json'))
+auth.set_custom_user_claims('FirebaseのユーザーUID', {'admin': True})
+```
+
+権限を外す場合は `{'admin': False}` を設定します。変更後は管理者が一度ログアウトして再ログインし、更新されたIDトークンを取得してください。FirebaseのWebログイン設定では、利用する本番ドメインを承認済みドメインにも追加してください。
 
 ## デプロイ
 

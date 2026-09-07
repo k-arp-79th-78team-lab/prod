@@ -62,10 +62,14 @@
 
             try {
                 const result = await signInWithPopup(auth, provider);
+                const idToken = await result.user.getIdToken();
                 const response = await fetch(apiUrl('/register-account'), {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: result.user.email })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ displayName: result.user.displayName || '' })
                 });
 
                 const payload = await response.json();

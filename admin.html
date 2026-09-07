@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>
-    window.__APP_API_BASE_URL__ = 'https://prod-d2s3.onrender.com';
-  </script>
+  <script>window.__APP_API_BASE_URL__ = 'https://prod-d2s3.onrender.com';</script>
   <title>管理者ページ</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="footer.css">
@@ -13,99 +11,88 @@
 <body>
   <main class="content">
     <h1>管理者ページ</h1>
-    <p>参加者IDの割り当て状況を確認し、必要に応じてリセットできます。</p>
-
-    <button id="refresh-status" class="big-button" type="button">状態を更新</button>
-    <button id="assign-ids" class="big-button" type="button">IDをランダム割り当て</button>
-    <button id="reset-assignments" class="big-button" type="button">登録・割り当てをリセット</button>
-
-    <div style="margin-top: 24px;">
-      <h2>手動割り当て</h2>
-      <label for="manual-email">メールアドレス</label>
-      <input id="manual-email" type="email" style="display:block; width:100%; max-width:320px; margin:8px 0 12px; padding:10px;" />
-      <label for="manual-participant-id">参加者ID</label>
-      <input id="manual-participant-id" type="number" min="0" max="299" style="display:block; width:100%; max-width:160px; margin:8px 0 12px; padding:10px;" />
-      <button id="manual-assign" class="big-button" type="button">手動で割り当て</button>
-    </div>
-
-    <div id="status" style="margin-top: 20px;"></div>
+    <p id="auth-status">管理者アカウントでログインしてください。</p>
+    <button id="admin-login" class="big-button" type="button">Firebaseでログイン</button>
+    <button id="admin-logout" class="big-button" type="button" hidden>ログアウト</button>
+    <section id="admin-controls" hidden>
+      <p>参加者IDの割り当て状況を確認し、必要に応じてリセットできます。</p>
+      <button id="refresh-status" class="big-button" type="button">状態を更新</button>
+      <button id="assign-ids" class="big-button" type="button">IDをランダム割り当て</button>
+      <button id="reset-assignments" class="big-button" type="button">登録・割り当てをリセット</button>
+      <div style="margin-top: 24px;">
+        <h2>手動割り当て</h2>
+        <label for="manual-email">メールアドレス</label>
+        <input id="manual-email" type="email" style="display:block; width:100%; max-width:320px; margin:8px 0 12px; padding:10px;">
+        <label for="manual-participant-id">参加者ID</label>
+        <input id="manual-participant-id" type="number" min="0" max="299" style="display:block; width:100%; max-width:160px; margin:8px 0 12px; padding:10px;">
+        <button id="manual-assign" class="big-button" type="button">手動で割り当て</button>
+      </div>
+      <div id="status" style="margin-top: 20px;"></div>
+      <h2 style="margin-top: 28px;">登録済みアカウント</h2>
+      <div style="overflow-x:auto;"><table id="accounts-table" style="width:100%; border-collapse:collapse;"><thead><tr><th style="text-align:left; padding:8px;">参加者ID</th><th style="text-align:left; padding:8px;">表示名</th><th style="text-align:left; padding:8px;">メールアドレス</th></tr></thead><tbody></tbody></table></div>
+    </section>
   </main>
-
-  <script>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
+    const firebaseConfig = { apiKey: 'AIzaSyC5i2GrXI1CF33SON2TZPAn7qT4SuG28xc', authDomain: 'k-arp-79th-78team-c140d.firebaseapp.com', projectId: 'k-arp-79th-78team-c140d', storageBucket: 'k-arp-79th-78team-c140d.firebasestorage.app', messagingSenderId: '903991667651', appId: '1:903991667651:web:ce3c14fa655fd234062b76' };
+    const auth = getAuth(initializeApp(firebaseConfig));
+    const provider = new GoogleAuthProvider();
+    const apiUrl = (path) => `${(window.__APP_API_BASE_URL__ || '').trim().replace(/\/$/, '')}${path}`;
+    const authStatus = document.getElementById('auth-status');
+    const adminLogin = document.getElementById('admin-login');
+    const adminLogout = document.getElementById('admin-logout');
+    const adminControls = document.getElementById('admin-controls');
     const statusBox = document.getElementById('status');
-    const apiUrl = (path) => {
-      const configuredBase = (window.__APP_API_BASE_URL__ || '').trim().replace(/\/$/, '');
-      if (configuredBase) {
-        return `${configuredBase}${path.startsWith('/') ? path : `/${path}`}`;
-      }
-      return path.startsWith('/') ? path : `/${path}`;
-    };
+    const accountsBody = document.querySelector('#accounts-table tbody');
 
-    async function loadStatus() {
-      const response = await fetch(apiUrl('/assignments-status'));
-      const data = await response.json();
-      statusBox.innerHTML = `
-        <p>登録済みアカウント数: ${data.registeredCount}</p>
-        <p>割り当て済み数: ${data.assignedCount}</p>
-        <p>未割り当て数: ${data.pendingCount}</p>
-        <p>100〜199: ${data.lowCount}</p>
-        <p>200〜299: ${data.highCount}</p>
-      `;
+    async function authorizedFetch(path, options = {}) {
+      if (!auth.currentUser) throw new Error('管理者ログインが必要です。');
+      const idToken = await auth.currentUser.getIdToken();
+      return fetch(apiUrl(path), { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${idToken}` } });
     }
 
-    document.getElementById('refresh-status').addEventListener('click', loadStatus);
+    async function loadAdminData() {
+      const [statusResponse, accountsResponse] = await Promise.all([authorizedFetch('/assignments-status'), authorizedFetch('/admin/accounts')]);
+      const statusData = await statusResponse.json();
+      const accountsData = await accountsResponse.json();
+      if (!statusResponse.ok || !accountsResponse.ok) throw new Error(statusData.message || accountsData.message || '管理者データを取得できません。');
+      statusBox.innerHTML = `<p>登録済みアカウント数: ${statusData.registeredCount}</p><p>割り当て済み数: ${statusData.assignedCount}</p><p>未割り当て数: ${statusData.pendingCount}</p><p>100〜199: ${statusData.lowCount}</p><p>200〜299: ${statusData.highCount}</p>`;
+      accountsBody.replaceChildren();
+      accountsData.accounts.forEach((account) => {
+        const row = document.createElement('tr');
+        [account.participantId || '未割り当て', account.displayName || '未取得', account.email].forEach((value) => { const cell = document.createElement('td'); cell.textContent = value; cell.style.padding = '8px'; cell.style.borderTop = '1px solid #ddd'; row.appendChild(cell); });
+        accountsBody.appendChild(row);
+      });
+    }
+
+    async function runAdminAction(path, confirmation, successMessage) {
+      if (!confirm(confirmation)) return;
+      const response = await authorizedFetch(path, { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || data.status !== 'ok') throw new Error(data.message || '操作に失敗しました。');
+      alert(successMessage);
+      await loadAdminData();
+    }
+
+    adminLogin.addEventListener('click', async () => { adminLogin.disabled = true; try { await signInWithPopup(auth, provider); } catch (error) { authStatus.textContent = error.message || 'ログインに失敗しました。'; adminLogin.disabled = false; } });
+    adminLogout.addEventListener('click', () => signOut(auth));
+    document.getElementById('refresh-status').addEventListener('click', () => loadAdminData().catch((error) => alert(error.message)));
+    document.getElementById('assign-ids').addEventListener('click', () => runAdminAction('/admin/assign-ids', '登録済みアカウントへIDを均等に割り当てますか？', 'IDを割り当てました。').catch((error) => alert(error.message)));
+    document.getElementById('reset-assignments').addEventListener('click', () => runAdminAction('/admin/reset-assignments', '登録・割り当て情報をリセットしますか？', '登録・割り当て情報をリセットしました。').catch((error) => alert(error.message)));
     document.getElementById('manual-assign').addEventListener('click', async () => {
       const email = document.getElementById('manual-email').value.trim().toLowerCase();
       const participantId = document.getElementById('manual-participant-id').value.trim();
-
-      if (!email || !participantId) {
-        alert('メールアドレスと参加者IDを入力してください。');
-        return;
-      }
-
-      const response = await fetch(apiUrl('/admin/manual-assign'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, participantId })
-      });
-      const data = await response.json();
-      if (data.status === 'ok') {
-        alert(`ID ${data.participantId} を割り当てました。`);
-        document.getElementById('manual-email').value = '';
-        document.getElementById('manual-participant-id').value = '';
-        loadStatus();
-      } else {
-        alert(data.message || '手動割り当てに失敗しました。');
-      }
-    });
-    document.getElementById('assign-ids').addEventListener('click', async () => {
-      if (!confirm('登録済みアカウントへIDを均等に割り当てますか？')) {
-        return;
-      }
-
-      const response = await fetch(apiUrl('/admin/assign-ids'), { method: 'POST' });
-      const data = await response.json();
-      if (data.status === 'ok') {
-        alert('IDを割り当てました。');
-        loadStatus();
-      } else {
-        alert(data.message || '割り当てに失敗しました。');
-      }
-    });
-    document.getElementById('reset-assignments').addEventListener('click', async () => {
-      if (!confirm('登録・割り当て情報をリセットしますか？')) {
-        return;
-      }
-
-      const response = await fetch(apiUrl('/admin/reset-assignments'), { method: 'POST' });
-      const data = await response.json();
-      if (data.status === 'ok') {
-        alert('登録・割り当て情報をリセットしました。');
-        loadStatus();
-      }
+      if (!email || !participantId) { alert('メールアドレスと参加者IDを入力してください。'); return; }
+      try { const response = await authorizedFetch('/admin/manual-assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, participantId }) }); const data = await response.json(); if (!response.ok || data.status !== 'ok') throw new Error(data.message || '手動割り当てに失敗しました。'); document.getElementById('manual-email').value = ''; document.getElementById('manual-participant-id').value = ''; await loadAdminData(); } catch (error) { alert(error.message); }
     });
 
-    loadStatus();
+    onAuthStateChanged(auth, async (user) => {
+      adminLogin.hidden = Boolean(user); adminLogout.hidden = !user; adminControls.hidden = true;
+      if (!user) { authStatus.textContent = '管理者アカウントでログインしてください。'; return; }
+      authStatus.textContent = `${user.displayName || user.email} の権限を確認しています。`;
+      try { await loadAdminData(); adminControls.hidden = false; authStatus.textContent = `${user.displayName || user.email} としてログイン中です。`; } catch (error) { authStatus.textContent = error.message; await signOut(auth); }
+    });
   </script>
 </body>
 </html>

@@ -2,9 +2,13 @@ import json
 import os
 import random
 from csv import writer as csv_writer
+from functools import wraps
 from io import StringIO
 
+import firebase_admin
 import gspread
+from firebase_admin import auth as firebase_auth
+from firebase_admin import credentials as firebase_credentials
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 from google.oauth2.service_account import Credentials
@@ -18,6 +22,7 @@ CORS(app, resources={r"/*": {"origins": [origin.strip() for origin in CORS_ORIGI
 
 ASSIGNMENTS_FILE = 'assignments.json'
 REGISTERED_ACCOUNTS_FILE = 'registered_accounts.json'
+firebase_app = None
 
 
 def load_assignments():
@@ -48,7 +53,18 @@ def load_registered_accounts():
     try:
         with open(REGISTERED_ACCOUNTS_FILE, 'r', encoding='utf-8') as handle:
             data = json.load(handle)
-            return data if isinstance(data, list) else []
+            if not isinstance(data, list):
+                return []
+            accounts = []
+            for item in data:
+                if isinstance(item, str):
+                    accounts.append({'email': item.strip().lower(), 'displayName': ''})
+                elif isinstance(item, dict) and item.get('email'):
+                    accounts.append({
+                        'email': item['email'].strip().lower(),
+                        'displayName': (item.get('displayName') or '').strip()
+                    })
+            return accounts
     except Exception as error:
         print(f'登録アカウント読み込みエラー: {error}')
         return []
@@ -88,6 +104,56 @@ def assign_balanced_ids(register_emails):
         assignments[email] = str(participant_id)
 
     return assignments
+
+
+def get_firebase_auth():
+    """Firebase Admin SDKを初期化して返します。"""
+    global firebase_app
+    if firebase_app:
+        return firebase_auth
+
+    service_account_json = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON') or os.environ.get('SERVICE_ACCOUNT_JSON')
+    if service_account_json:
+        credential = firebase_credentials.Certificate(json.loads(service_account_json))
+    elif os.path.exists('firebase-service-account.json'):
+        credential = firebase_credentials.Certificate('firebase-service-account.json')
+    else:
+        return None
+
+    firebase_app = firebase_admin.initialize_app(credential)
+    return firebase_auth
+
+
+def verify_id_token():
+    """AuthorizationヘッダーのFirebase IDトークンを検証します。"""
+    authorization = request.headers.get('Authorization', '')
+    if not authorization.startswith('Bearer '):
+        return None
+
+    token = authorization[7:].strip()
+    if not token:
+        return None
+
+    try:
+        auth_module = get_firebase_auth()
+        return auth_module.verify_id_token(token) if auth_module else None
+    except Exception as error:
+        print(f'Firebaseトークン検証エラー: {error}')
+        return None
+
+
+def admin_required(handler):
+    """Firebase Authのadminカスタムクレームを持つユーザーだけ許可します。"""
+    @wraps(handler)
+    def wrapped(*args, **kwargs):
+        decoded_token = verify_id_token()
+        if not decoded_token:
+            return jsonify({'status': 'error', 'message': '管理者ログインが必要です。'}), 401
+        if decoded_token.get('admin') is not True:
+            return jsonify({'status': 'error', 'message': '管理者権限がありません。'}), 403
+        return handler(*args, **kwargs)
+
+    return wrapped
 
 # --- Google Sheets 連携 ---
 
@@ -185,15 +251,24 @@ def static_files(path):
 
 @app.post('/register-account')
 def register_account():
+    decoded_token = verify_id_token()
+    if not decoded_token:
+        return jsonify({'status': 'error', 'message': 'Firebaseログインが必要です。'}), 401
+
     data = request.get_json(silent=True) or {}
-    email = (data.get('email') or '').strip().lower()
+    email = (decoded_token.get('email') or '').strip().lower()
+    display_name = (decoded_token.get('name') or data.get('displayName') or '').strip()
 
     if not email:
         return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
 
     registered_accounts = load_registered_accounts()
-    if email not in registered_accounts:
-        registered_accounts.append(email)
+    account = next((item for item in registered_accounts if item['email'] == email), None)
+    if account is None:
+        registered_accounts.append({'email': email, 'displayName': display_name})
+        save_registered_accounts(registered_accounts)
+    elif display_name and account.get('displayName') != display_name:
+        account['displayName'] = display_name
         save_registered_accounts(registered_accounts)
 
     assignments = load_assignments()
@@ -204,9 +279,11 @@ def register_account():
 
 
 @app.get('/assignments-status')
+@admin_required
 def assignments_status():
     assignments = load_assignments()
     registered_accounts = load_registered_accounts()
+    registered_emails = {account['email'] for account in registered_accounts}
     assigned_ids = [int(value) for value in assignments.values() if str(value).isdigit()]
     low_count = sum(1 for value in assigned_ids if 100 <= value <= 199)
     high_count = sum(1 for value in assigned_ids if 200 <= value <= 299)
@@ -214,14 +291,32 @@ def assignments_status():
     return jsonify({
         'registeredCount': len(registered_accounts),
         'assignedCount': len(assignments),
-        'pendingCount': max(0, len(registered_accounts) - len(assignments)),
+        'pendingCount': max(0, len(registered_emails - set(assignments))),
         'lowCount': low_count,
         'highCount': high_count,
         'remaining': max(0, len(registered_accounts) - len(assignments))
     })
 
 
+@app.get('/admin/accounts')
+@admin_required
+def admin_accounts():
+    assignments = load_assignments()
+    accounts = load_registered_accounts()
+    return jsonify({
+        'accounts': [
+            {
+                'email': account['email'],
+                'displayName': account.get('displayName', ''),
+                'participantId': assignments.get(account['email'])
+            }
+            for account in accounts
+        ]
+    })
+
+
 @app.post('/admin/register-email')
+@admin_required
 def admin_register_email():
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip().lower()
@@ -230,14 +325,15 @@ def admin_register_email():
         return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
 
     registered_accounts = load_registered_accounts()
-    if email not in registered_accounts:
-        registered_accounts.append(email)
+    if not any(item['email'] == email for item in registered_accounts):
+        registered_accounts.append({'email': email, 'displayName': ''})
         save_registered_accounts(registered_accounts)
 
     return jsonify({'status': 'ok', 'registeredCount': len(registered_accounts)})
 
 
 @app.post('/admin/assign-ids')
+@admin_required
 def admin_assign_ids():
     registered_accounts = load_registered_accounts()
     if not registered_accounts:
@@ -246,12 +342,13 @@ def admin_assign_ids():
     if len(registered_accounts) % 2 != 0:
         return jsonify({'status': 'error', 'message': '登録アカウント数が偶数でないため、均等割り当てできません。'}), 400
 
-    assignments = assign_balanced_ids(registered_accounts)
+    assignments = assign_balanced_ids([account['email'] for account in registered_accounts])
     save_assignments(assignments)
     return jsonify({'status': 'ok', 'assignments': assignments})
 
 
 @app.post('/admin/manual-assign')
+@admin_required
 def admin_manual_assign():
     data = request.get_json(silent=True) or {}
     email = (data.get('email') or '').strip().lower()
@@ -272,14 +369,15 @@ def admin_manual_assign():
     save_assignments(assignments)
 
     registered_accounts = load_registered_accounts()
-    if email not in registered_accounts:
-        registered_accounts.append(email)
+    if not any(item['email'] == email for item in registered_accounts):
+        registered_accounts.append({'email': email, 'displayName': ''})
         save_registered_accounts(registered_accounts)
 
     return jsonify({'status': 'ok', 'participantId': participant_id_number})
 
 
 @app.post('/admin/reset-assignments')
+@admin_required
 def reset_assignments():
     save_assignments({})
     save_registered_accounts([])
