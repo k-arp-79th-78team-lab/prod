@@ -32,17 +32,25 @@ python app.py
 
 管理者ページは `/admin` で開き、Firebase Authの `admin: true` カスタムクレームを持つアカウントだけが操作できます。Render側で管理者メール一覧を設定する必要はありません。
 
-Firebaseコンソールにはカスタムクレームを直接編集する画面がないため、Firebase Admin SDKで管理者を指定します。FirebaseサービスアカウントJSONを用意したうえで、次のような一度限りのスクリプトを実行してください。
+Firebaseコンソールにはカスタムクレームを直接編集する画面がないため、Firebase Admin SDKで管理者を指定します。取得したユーザーUIDを使い、FirebaseサービスアカウントJSONを用意したうえで、次のコマンドを実行してください。
 
-```python
-import firebase_admin
-from firebase_admin import auth, credentials
-
-firebase_admin.initialize_app(credentials.Certificate('firebase-service-account.json'))
-auth.set_custom_user_claims('FirebaseのユーザーUID', {'admin': True})
+```bash
+python3 set_admin_claim.py 'FirebaseのユーザーUID'
 ```
 
-権限を外す場合は `{'admin': False}` を設定します。変更後は管理者が一度ログアウトして再ログインし、更新されたIDトークンを取得してください。FirebaseのWebログイン設定では、利用する本番ドメインを承認済みドメインにも追加してください。
+サービスアカウントJSONを別の場所に保存している場合は、パスを指定できます。
+
+```bash
+python3 set_admin_claim.py 'FirebaseのユーザーUID' --service-account '/path/to/firebase-service-account.json'
+```
+
+または、`FIREBASE_SERVICE_ACCOUNT_JSON` / `SERVICE_ACCOUNT_JSON` 環境変数にサービスアカウントJSON全体を設定してください。サービスアカウントJSONはGitにコミットしないでください。権限を外す場合は次のコマンドを実行します。
+
+```bash
+python3 set_admin_claim.py 'FirebaseのユーザーUID' --revoke
+```
+
+変更後は管理者が一度ログアウトして再ログインし、更新されたIDトークンを取得してください。FirebaseのWebログイン設定では、利用する本番ドメインを承認済みドメインにも追加してください。
 
 ## デプロイ
 
