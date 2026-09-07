@@ -48,7 +48,7 @@
 
     async function authorizedFetch(path, options = {}) {
       if (!auth.currentUser) throw new Error('管理者ログインが必要です。');
-      const idToken = await auth.currentUser.getIdToken();
+      const idToken = await auth.currentUser.getIdToken(true);
       return fetch(apiUrl(path), { ...options, headers: { ...(options.headers || {}), Authorization: `Bearer ${idToken}` } });
     }
 
@@ -56,7 +56,11 @@
       const [statusResponse, accountsResponse] = await Promise.all([authorizedFetch('/assignments-status'), authorizedFetch('/admin/accounts')]);
       const statusData = await statusResponse.json();
       const accountsData = await accountsResponse.json();
-      if (!statusResponse.ok || !accountsResponse.ok) throw new Error(statusData.message || accountsData.message || '管理者データを取得できません。');
+      if (!statusResponse.ok || !accountsResponse.ok) {
+        const failedResponse = !statusResponse.ok ? statusResponse : accountsResponse;
+        const failedData = !statusResponse.ok ? statusData : accountsData;
+        throw new Error(`HTTP ${failedResponse.status}: ${failedData.message || '管理者データを取得できません。'}`);
+      }
       statusBox.innerHTML = `<p>登録済みアカウント数: ${statusData.registeredCount}</p><p>割り当て済み数: ${statusData.assignedCount}</p><p>未割り当て数: ${statusData.pendingCount}</p><p>100〜199: ${statusData.lowCount}</p><p>200〜299: ${statusData.highCount}</p>`;
       accountsBody.replaceChildren();
       accountsData.accounts.forEach((account) => {
@@ -91,7 +95,15 @@
       adminLogin.hidden = Boolean(user); adminLogout.hidden = !user; adminControls.hidden = true;
       if (!user) { authStatus.textContent = '管理者アカウントでログインしてください。'; return; }
       authStatus.textContent = `${user.displayName || user.email} の権限を確認しています。`;
-      try { await loadAdminData(); adminControls.hidden = false; authStatus.textContent = `${user.displayName || user.email} としてログイン中です。`; } catch (error) { authStatus.textContent = error.message; await signOut(auth); }
+      try {
+        await loadAdminData();
+        adminControls.hidden = false;
+        authStatus.textContent = `${user.displayName || user.email} としてログイン中です。`;
+      } catch (error) {
+        authStatus.textContent = `${error.message} Firebaseの管理者権限とRenderの設定を確認してください。`;
+        adminLogin.hidden = false;
+        adminLogin.disabled = false;
+      }
     });
   </script>
 </body>
