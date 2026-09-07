@@ -52,8 +52,7 @@
         return path.startsWith('/') ? path : `/${path}`;
     };
     const appUrl = (path) => {
-        const pathValue = path.startsWith('/') ? path : `/${path}`;
-        return pathValue;
+        return new URL(path, document.baseURI).href;
     };
 
     if (loginButton) {
@@ -76,10 +75,10 @@
 
                 console.log('Google login successful', result.user.displayName);
                 if (payload.participantId) {
-                    window.location.href = appUrl(`/test?pid=${encodeURIComponent(payload.participantId)}`);
+                    window.location.href = appUrl(`test.html?pid=${encodeURIComponent(payload.participantId)}`);
                 } else {
                     alert('登録は完了しました。管理者が割り当てを実行するまでお待ちください。');
-                    window.location.href = appUrl('/');
+                    window.location.href = appUrl('index.html');
                 }
             } catch (error) {
                 console.error('Google login failed', error);
