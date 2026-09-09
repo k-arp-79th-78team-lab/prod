@@ -22,7 +22,7 @@
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-analytics.js";
-    import { getAuth, GoogleAuthProvider, getRedirectResult, signInWithRedirect } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, getRedirectResult, onAuthStateChanged, signInWithRedirect } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyC5i2GrXI1CF33SON2TZPAn7qT4SuG28xc",
@@ -55,7 +55,11 @@
         return new URL(path, document.baseURI).href;
     };
 
+    let registrationStarted = false;
+
     async function registerAccount(user) {
+        if (registrationStarted) return;
+        registrationStarted = true;
         const idToken = await user.getIdToken(true);
         const response = await fetch(apiUrl('/register-account'), {
                     method: 'POST',
@@ -76,6 +80,7 @@
                 if (payload.participantId) {
                     successUrl.searchParams.set('pid', payload.participantId);
                 }
+                localStorage.removeItem('pendingParticipantLogin');
                 window.location.href = successUrl.href;
     }
 
@@ -84,6 +89,7 @@
             loginButton.disabled = true;
             loginButton.textContent = 'Googleログインへ移動しています...';
             try {
+                localStorage.setItem('pendingParticipantLogin', 'true');
                 await signInWithRedirect(auth, provider);
             } catch (error) {
                 console.error('Google login redirect failed', error);
@@ -95,15 +101,29 @@
     }
 
     getRedirectResult(auth).then((result) => {
-        if (!result || !result.user) return;
-        loginButton.disabled = true;
-        loginButton.textContent = '登録処理中...';
-        return registerAccount(result.user);
+        if (result && result.user) return registerAccount(result.user);
+        if (localStorage.getItem('pendingParticipantLogin') === 'true' && auth.currentUser) {
+            return registerAccount(auth.currentUser);
+        }
     }).catch((error) => {
         console.error('Google login result failed', error);
         alert(error.message || 'ログイン結果を処理できませんでした。');
         loginButton.disabled = false;
         loginButton.textContent = 'Googleでログイン';
+    });
+
+    onAuthStateChanged(auth, (user) => {
+        if (user && localStorage.getItem('pendingParticipantLogin') === 'true') {
+            loginButton.disabled = true;
+            loginButton.textContent = '登録処理中...';
+            registerAccount(user).catch((error) => {
+                console.error('Participant registration failed', error);
+                localStorage.removeItem('pendingParticipantLogin');
+                alert(error.message || '登録に失敗しました。');
+                loginButton.disabled = false;
+                loginButton.textContent = 'Googleでログイン';
+            });
+        }
     });
     </script>
 </body>
