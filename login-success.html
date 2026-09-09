@@ -13,10 +13,11 @@
   <main class="content">
     <div class="login-container">
       <h1>ログインに成功しました</h1>
+      <p>Googleでのログインと登録が完了しました。</p>
       <p id="success-message">ログインありがとうございます。</p>
       <div id="assigned-actions" class="hidden">
-        <p>参加者IDが割り当てられています。回答ページへ進めます。</p>
-        <button id="test-button" class="big-button" type="button">回答ページへ</button>
+        <p>参加者IDが割り当てられています。下のボタンから回答を開始できます。</p>
+        <button id="test-button" class="big-button" type="button">test.htmlへ進む</button>
       </div>
       <button id="home-button" class="big-button" type="button">トップへ戻る</button>
     </div>
@@ -34,12 +35,12 @@
 
     if (participantId) {
       assignedActions.classList.remove('hidden');
-      successMessage.textContent = `参加者ID ${participantId} が割り当てられています。`;
+      successMessage.textContent = `割り当てられた参加者IDは ${participantId} です。`;
       document.getElementById('test-button').addEventListener('click', () => {
         window.location.href = `test.html?pid=${encodeURIComponent(participantId)}`;
       });
     } else {
-      successMessage.textContent = '登録を受け付けました。管理者が参加者IDを割り当てるまでお待ちください。';
+      successMessage.textContent = '登録は完了しました。管理者がIDを割り当てるまでお待ちください。';
     }
 
     document.getElementById('home-button').addEventListener('click', () => {
