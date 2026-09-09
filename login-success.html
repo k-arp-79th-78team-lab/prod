@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログイン成功</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="footer.css">
+</head>
+<body>
+  <main class="content">
+    <div class="login-container">
+      <h1>ログインに成功しました</h1>
+      <p id="success-message">ログインありがとうございます。</p>
+      <div id="assigned-actions" class="hidden">
+        <p>参加者IDが割り当てられています。回答ページへ進めます。</p>
+        <button id="test-button" class="big-button" type="button">回答ページへ</button>
+      </div>
+      <button id="home-button" class="big-button" type="button">トップへ戻る</button>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>Copyright © 2026 神奈川県立鎌倉高等学校 K-ARP 79期78班 All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const participantId = params.get('pid');
+    const assignedActions = document.getElementById('assigned-actions');
+    const successMessage = document.getElementById('success-message');
+
+    if (participantId) {
+      assignedActions.classList.remove('hidden');
+      successMessage.textContent = `参加者ID ${participantId} が割り当てられています。`;
+      document.getElementById('test-button').addEventListener('click', () => {
+        window.location.href = `test.html?pid=${encodeURIComponent(participantId)}`;
+      });
+    } else {
+      successMessage.textContent = '登録を受け付けました。管理者が参加者IDを割り当てるまでお待ちください。';
+    }
+
+    document.getElementById('home-button').addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

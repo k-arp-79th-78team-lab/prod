@@ -72,16 +72,11 @@
                 }
 
                 console.log('Google login successful', user.displayName);
+                const successUrl = new URL('login-success.html', document.baseURI);
                 if (payload.participantId) {
-                    window.location.href = appUrl(`test.html?pid=${encodeURIComponent(payload.participantId)}`);
-                } else {
-                    document.querySelector('.login-container').innerHTML = `
-                        <h1>登録が完了しました</h1>
-                        <p>${user.displayName || user.email} さんの登録を受け付けました。</p>
-                        <p>管理者が参加者IDを割り当てるまで、このページを閉じずにお待ちください。</p>
-                        <p>割り当て後は、もう一度このページでログインしてください。</p>
-                    `;
+                    successUrl.searchParams.set('pid', payload.participantId);
                 }
+                window.location.href = successUrl.href;
     }
 
     if (loginButton) {
