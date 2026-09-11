@@ -14,10 +14,18 @@ from flask_cors import CORS
 from google.oauth2.service_account import Credentials
 
 app = Flask(__name__, static_folder='.')
-CORS_ORIGINS = os.environ.get(
-    'CORS_ORIGINS',
-    'https://karp-79th-78team.com,http://localhost:5000,http://127.0.0.1:5000'
-).split(',')
+CORS_ORIGINS = {
+    origin.strip()
+    for origin in os.environ.get('CORS_ORIGINS', '').split(',')
+    if origin.strip()
+}
+CORS_ORIGINS.update({
+    'https://karp-79th-78team.com',
+    'https://www.karp-79th-78team.com',
+    'https://prod-d2s3.onrender.com',
+    'http://localhost:5000',
+    'http://127.0.0.1:5000'
+})
 CORS(app, resources={r"/*": {"origins": [origin.strip() for origin in CORS_ORIGINS if origin.strip()]}})
 
 ASSIGNMENTS_FILE = 'assignments.json'
