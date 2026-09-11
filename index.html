@@ -56,13 +56,14 @@
         return new URL(path, document.baseURI).href;
     };
 
-    let registrationStarted = false;
+    let registrationPromise = null;
 
     async function registerAccount(user) {
-        if (registrationStarted) return;
-        registrationStarted = true;
-        const idToken = await user.getIdToken(true);
-        const response = await fetch(apiUrl('/register-account'), {
+        if (registrationPromise) return registrationPromise;
+
+        registrationPromise = (async () => {
+            const idToken = await user.getIdToken(true);
+            const response = await fetch(apiUrl('/register-account'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -71,18 +72,25 @@
                     body: JSON.stringify({ displayName: user.displayName || '' })
                 });
 
-                const payload = await response.json();
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${payload.message || '登録に失敗しました。'}`);
-                }
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${payload.message || '登録に失敗しました。'}`);
+            }
 
-                console.log('Google login successful', user.displayName);
-                const successUrl = new URL('login-success.html', document.baseURI);
-                if (payload.participantId) {
-                    successUrl.searchParams.set('pid', payload.participantId);
-                }
-                localStorage.removeItem('pendingParticipantLogin');
-                window.location.href = successUrl.href;
+            console.log('Google login successful', user.displayName);
+            const successUrl = new URL('login-success.html', document.baseURI);
+            if (payload.participantId) {
+                successUrl.searchParams.set('pid', payload.participantId);
+            }
+            localStorage.removeItem('pendingParticipantLogin');
+            window.location.href = successUrl.href;
+        })();
+
+        try {
+            return await registrationPromise;
+        } finally {
+            registrationPromise = null;
+        }
     }
 
     if (loginButton) {
