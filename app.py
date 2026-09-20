@@ -306,7 +306,7 @@ def register_account():
     if not email:
         return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
 
-    if is_admin_email(email):
+    if decoded_token.get('admin') is True:
         return jsonify({'status': 'error', 'message': '管理者アカウントは参加者登録に使用できません。'}), 403
 
     registered_accounts = load_registered_accounts()

@@ -1,3 +1,6 @@
 [
-  "test@example.com"
+  {
+    "email": "participant@example.com",
+    "displayName": "参加者"
+  }
 ]

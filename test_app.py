@@ -28,8 +28,8 @@ def test_register_account_rejects_admin_login():
     original = app.verify_id_token
     original_is_admin = app.is_admin_email
     try:
-        app.verify_id_token = lambda: {'email': 'admin@example.com', 'name': '管理者'}
-        app.is_admin_email = lambda email: True
+        app.verify_id_token = lambda: {'email': 'admin@example.com', 'name': '管理者', 'admin': True}
+        app.is_admin_email = lambda email: False
         response = client.post(
             '/register-account',
             headers={'Authorization': 'Bearer test-token'},
@@ -41,3 +41,24 @@ def test_register_account_rejects_admin_login():
 
     assert response.status_code == 403
     assert response.get_json()['status'] == 'error'
+
+
+def test_register_account_allows_non_admin_token_even_if_email_lookup_fails():
+    client = app.app.test_client()
+
+    original = app.verify_id_token
+    original_is_admin = app.is_admin_email
+    try:
+        app.verify_id_token = lambda: {'email': 'participant@example.com', 'name': '参加者', 'admin': False}
+        app.is_admin_email = lambda email: True
+        response = client.post(
+            '/register-account',
+            headers={'Authorization': 'Bearer test-token'},
+            json={'displayName': '参加者'}
+        )
+    finally:
+        app.verify_id_token = original
+        app.is_admin_email = original_is_admin
+
+    assert response.status_code == 200
+    assert response.get_json()['status'] == 'ok'
