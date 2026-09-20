@@ -72,7 +72,7 @@ def load_registered_accounts():
                         'email': item['email'].strip().lower(),
                         'displayName': (item.get('displayName') or '').strip()
                     })
-            return accounts
+            return filter_registered_accounts(accounts)
     except Exception as error:
         print(f'登録アカウント読み込みエラー: {error}')
         return []
@@ -82,6 +82,42 @@ def save_registered_accounts(accounts):
     """登録済みアカウント一覧を保存します。"""
     with open(REGISTERED_ACCOUNTS_FILE, 'w', encoding='utf-8') as handle:
         json.dump(accounts, handle, ensure_ascii=False, indent=2)
+
+
+def is_admin_email(email):
+    """指定メールアドレスが管理者かどうかを確認します。"""
+    normalized_email = (email or '').strip().lower()
+    if not normalized_email:
+        return False
+
+    try:
+        auth_module = get_firebase_auth()
+        if not auth_module:
+            return False
+        user = auth_module.get_user_by_email(normalized_email)
+        claims = user.custom_claims or {}
+        return claims.get('admin') is True
+    except Exception:
+        return False
+
+
+def filter_registered_accounts(accounts):
+    """参加者登録一覧から管理者アカウントを除外します。"""
+    filtered = []
+    for item in accounts:
+        if isinstance(item, str):
+            email = item.strip().lower()
+            display_name = ''
+        elif isinstance(item, dict) and item.get('email'):
+            email = str(item.get('email')).strip().lower()
+            display_name = str(item.get('displayName') or '').strip()
+        else:
+            continue
+
+        if not email or is_admin_email(email):
+            continue
+        filtered.append({'email': email, 'displayName': display_name})
+    return filtered
 
 
 def assign_balanced_ids(register_emails):
@@ -270,6 +306,9 @@ def register_account():
     if not email:
         return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
 
+    if is_admin_email(email):
+        return jsonify({'status': 'error', 'message': '管理者アカウントは参加者登録に使用できません。'}), 403
+
     registered_accounts = load_registered_accounts()
     account = next((item for item in registered_accounts if item['email'] == email), None)
     if account is None:
@@ -332,6 +371,9 @@ def admin_register_email():
     if not email:
         return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
 
+    if is_admin_email(email):
+        return jsonify({'status': 'error', 'message': '管理者アカウントは参加者として登録できません。'}), 400
+
     registered_accounts = load_registered_accounts()
     if not any(item['email'] == email for item in registered_accounts):
         registered_accounts.append({'email': email, 'displayName': ''})
@@ -364,6 +406,9 @@ def admin_manual_assign():
 
     if not email or not participant_id:
         return jsonify({'status': 'error', 'message': 'メールアドレスと参加者IDが必要です。'}), 400
+
+    if is_admin_email(email):
+        return jsonify({'status': 'error', 'message': '管理者アカウントには参加者IDを割り当てられません。'}), 400
 
     if not participant_id.isdigit():
         return jsonify({'status': 'error', 'message': '参加者IDは数字で指定してください。'}), 400
