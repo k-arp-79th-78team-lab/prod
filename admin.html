@@ -70,6 +70,12 @@
       });
     }
 
+    async function isAdminUser(user) {
+      if (!user) return false;
+      const tokenResult = await user.getIdTokenResult();
+      return tokenResult.claims && tokenResult.claims.admin === true;
+    }
+
     async function runAdminAction(path, confirmation, successMessage) {
       if (!confirm(confirmation)) return;
       const response = await authorizedFetch(path, { method: 'POST' });
@@ -93,9 +99,22 @@
 
     onAuthStateChanged(auth, async (user) => {
       adminLogin.hidden = Boolean(user); adminLogout.hidden = !user; adminControls.hidden = true;
-      if (!user) { authStatus.textContent = '管理者アカウントでログインしてください。'; return; }
-      authStatus.textContent = `${user.displayName || user.email} の権限を確認しています。`;
+      if (!user) {
+        authStatus.textContent = '管理者アカウントでログインしてください。';
+        return;
+      }
+
       try {
+        const isAdmin = await isAdminUser(user);
+        if (!isAdmin) {
+          authStatus.textContent = `${user.displayName || user.email} は管理者権限がありません。`;
+          adminLogin.hidden = true;
+          adminLogout.hidden = false;
+          adminControls.hidden = true;
+          return;
+        }
+
+        authStatus.textContent = `${user.displayName || user.email} の権限を確認しています。`;
         await loadAdminData();
         adminControls.hidden = false;
         authStatus.textContent = `${user.displayName || user.email} としてログイン中です。`;
