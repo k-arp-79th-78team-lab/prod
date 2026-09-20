@@ -9,6 +9,7 @@ import firebase_admin
 import gspread
 from firebase_admin import auth as firebase_auth
 from firebase_admin import credentials as firebase_credentials
+from firebase_admin import firestore as firebase_firestore
 from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 from google.oauth2.service_account import Credentials
@@ -33,8 +34,35 @@ REGISTERED_ACCOUNTS_FILE = 'registered_accounts.json'
 firebase_app = None
 
 
+def get_firestore_client():
+    """Firestore クライアントを返します。初期化できない場合は None を返します。"""
+    try:
+        if not firebase_app:
+            get_firebase_auth()
+        if not firebase_app:
+            return None
+        return firebase_firestore.client()
+    except Exception as error:
+        print(f'Firestore接続エラー: {error}')
+        return None
+
+
 def load_assignments():
     """参加者IDの割り当て情報を読み込みます。"""
+    client = get_firestore_client()
+    if client:
+        assignments = {}
+        try:
+            for document in client.collection('assignments').stream():
+                data = document.to_dict() or {}
+                email = (data.get('email') or document.id or '').strip().lower()
+                value = data.get('participantId')
+                if email and value is not None:
+                    assignments[email] = str(value)
+            return assignments
+        except Exception as error:
+            print(f'Firestore割り当て情報読み込みエラー: {error}')
+
     if not os.path.exists(ASSIGNMENTS_FILE):
         return {}
 
@@ -49,12 +77,44 @@ def load_assignments():
 
 def save_assignments(assignments):
     """参加者IDの割り当て情報を保存します。"""
+    client = get_firestore_client()
+    if client:
+        try:
+            collection = client.collection('assignments')
+            for document in collection.stream():
+                document.reference.delete()
+            for email, value in assignments.items():
+                collection.document(email.strip().lower()).set({
+                    'email': email.strip().lower(),
+                    'participantId': str(value)
+                }, merge=True)
+            return
+        except Exception as error:
+            print(f'Firestore割り当て情報保存エラー: {error}')
+
     with open(ASSIGNMENTS_FILE, 'w', encoding='utf-8') as handle:
         json.dump(assignments, handle, ensure_ascii=False, indent=2)
 
 
 def load_registered_accounts():
     """登録済みアカウント一覧を読み込みます。"""
+    client = get_firestore_client()
+    if client:
+        accounts = []
+        try:
+            for document in client.collection('participants').stream():
+                data = document.to_dict() or {}
+                email = str(data.get('email') or document.id or '').strip().lower()
+                if not email:
+                    continue
+                accounts.append({
+                    'email': email,
+                    'displayName': str(data.get('displayName') or '').strip()
+                })
+            return filter_registered_accounts(accounts)
+        except Exception as error:
+            print(f'Firestore登録アカウント読み込みエラー: {error}')
+
     if not os.path.exists(REGISTERED_ACCOUNTS_FILE):
         return []
 
@@ -80,6 +140,25 @@ def load_registered_accounts():
 
 def save_registered_accounts(accounts):
     """登録済みアカウント一覧を保存します。"""
+    client = get_firestore_client()
+    if client:
+        try:
+            collection = client.collection('participants')
+            for document in collection.stream():
+                document.reference.delete()
+            for account in accounts:
+                email = str(account.get('email') or '').strip().lower()
+                display_name = str(account.get('displayName') or '').strip()
+                if not email:
+                    continue
+                collection.document(email).set({
+                    'email': email,
+                    'displayName': display_name
+                }, merge=True)
+            return
+        except Exception as error:
+            print(f'Firestore登録アカウント保存エラー: {error}')
+
     with open(REGISTERED_ACCOUNTS_FILE, 'w', encoding='utf-8') as handle:
         json.dump(accounts, handle, ensure_ascii=False, indent=2)
 
