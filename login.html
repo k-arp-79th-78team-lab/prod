@@ -80,6 +80,7 @@
                     throw new Error(`HTTP ${response.status}: ${payload.message || '登録に失敗しました。'}`);
                 }
 
+                localStorage.setItem('googleDisplayName', user.displayName || '');
                 console.log('Google login successful', user.displayName);
                 const successUrl = new URL('login-success.html', document.baseURI);
                 if (payload.participantId) {

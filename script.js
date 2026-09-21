@@ -362,8 +362,10 @@ function finishSession() {
     testStart = Date.now();
   }
 
+  const displayName = (localStorage.getItem('googleDisplayName') || '').trim();
   const payload = {
     participantId,
+    displayName,
     learnType,
     answerType,
     condition,

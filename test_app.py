@@ -1,3 +1,5 @@
+import json
+
 import app
 
 
@@ -62,3 +64,34 @@ def test_register_account_allows_non_admin_token_even_if_email_lookup_fails():
 
     assert response.status_code == 200
     assert response.get_json()['status'] == 'ok'
+
+
+def test_download_csv_includes_display_name_after_participant_id(tmp_path, monkeypatch):
+    payload = [{
+        'participantId': '123',
+        'displayName': '山田太郎',
+        'learnType': 'analog',
+        'answerType': 'analog',
+        'condition': 'control',
+        'totalTimeSec': 10,
+        'totalCorrect': 1,
+        'questions': [{
+            'id': '1',
+            'text': 'Q1',
+            'correctAnswer': '1',
+            'participantAnswer': '1',
+            'correct': True,
+            'timeSec': 2,
+        }],
+        'timestamp': '2024-01-01T00:00:00Z',
+    }]
+    data_file = tmp_path / 'results.json'
+    data_file.write_text(json.dumps(payload), encoding='utf-8')
+    monkeypatch.chdir(tmp_path)
+
+    response = app.download_csv()
+
+    assert response.status_code == 200
+    csv_text = response.get_data(as_text=True)
+    assert 'participantId,displayName' in csv_text
+    assert '123,山田太郎' in csv_text

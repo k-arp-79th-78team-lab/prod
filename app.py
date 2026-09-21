@@ -319,6 +319,7 @@ def append_to_sheet(data):
 
         row = [
             data.get('participantId', ''),
+            data.get('displayName', ''),
             data.get('learnType', ''),
             data.get('answerType', ''),
             data.get('totalCorrect', ''),
@@ -518,7 +519,14 @@ def reset_assignments():
 
 @app.post('/submit')
 def submit():
-    data = request.get_json(silent=True) or {}
+    data = dict(request.get_json(silent=True) or {})
+    display_name = str(data.get('displayName') or '').strip()
+    if not display_name:
+        decoded_token = verify_id_token()
+        if decoded_token:
+            display_name = str(decoded_token.get('name') or decoded_token.get('displayName') or '').strip()
+    data['displayName'] = display_name
+
     filename = 'results.json'
 
     if os.path.exists(filename):
@@ -562,7 +570,7 @@ def download_csv():
     writer = csv_writer(output)
 
     writer.writerow([
-        'participantId', 'learnType', 'answerType', 'condition', 'totalTimeSec', 'totalCorrect',
+        'participantId', 'displayName', 'learnType', 'answerType', 'condition', 'totalTimeSec', 'totalCorrect',
         'questionId', 'questionText', 'correctAnswer', 'participantAnswer', 'correct', 'timeSec', 'timestamp'
     ])
 
@@ -570,6 +578,7 @@ def download_csv():
         for question in entry.get('questions', []):
             writer.writerow([
                 entry.get('participantId', ''),
+                entry.get('displayName', ''),
                 entry.get('learnType', ''),
                 entry.get('answerType', ''),
                 entry.get('condition', ''),
