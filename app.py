@@ -14,7 +14,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from flask_cors import CORS
 from google.oauth2.service_account import Credentials
 
-app = Flask(__name__, static_folder='.')
+app = Flask(__name__, static_folder=None)
 CORS_ORIGINS = {
     origin.strip()
     for origin in os.environ.get('CORS_ORIGINS', '').split(',')
@@ -31,6 +31,17 @@ CORS(app, resources={r"/*": {"origins": [origin.strip() for origin in CORS_ORIGI
 
 ASSIGNMENTS_FILE = 'assignments.json'
 REGISTERED_ACCOUNTS_FILE = 'registered_accounts.json'
+PUBLIC_STATIC_FILES = {
+    'admin.html',
+    'finish.html',
+    'footer.css',
+    'index.html',
+    'login-success.html',
+    'login.html',
+    'script.js',
+    'style.css',
+    'test.html',
+}
 firebase_app = None
 
 
@@ -46,6 +57,15 @@ def sanitize_result_records(records):
             if isinstance(record, dict):
                 record['displayName'] = first_display_name_character(record.get('displayName'))
     return records
+
+
+def get_participant_condition(participant_id):
+    """参加者IDから実験条件を返します。"""
+    if 1 <= participant_id <= 49 or 100 <= participant_id <= 199:
+        return 'analog', 'analog'
+    if 50 <= participant_id <= 99 or 200 <= participant_id <= 299:
+        return 'digital', 'digital'
+    return None
 
 
 def get_firestore_client():
@@ -402,9 +422,9 @@ def finish_page():
 
 @app.get('/<path:path>')
 def static_files(path):
-    if os.path.isfile(path):
-        return send_from_directory('.', path)
-    return 'File not found', 404
+    if path not in PUBLIC_STATIC_FILES:
+        return 'File not found', 404
+    return send_from_directory('.', path)
 
 
 @app.post('/register-account')
@@ -553,15 +573,46 @@ def reset_assignments():
 
 @app.post('/submit')
 def submit():
-    data = dict(request.get_json(silent=True) or {})
-    display_name = first_display_name_character(data.get('displayName'))
-    if not display_name:
-        decoded_token = verify_id_token()
-        if decoded_token:
-            display_name = first_display_name_character(
-                decoded_token.get('name') or decoded_token.get('displayName')
-            )
-    data['displayName'] = display_name
+    decoded_token = verify_id_token()
+    if not decoded_token:
+        return jsonify({'status': 'error', 'message': 'ログインが必要です。'}), 401
+
+    if decoded_token.get('admin') is True:
+        return jsonify({'status': 'error', 'message': '管理者アカウントでは回答を送信できません。'}), 403
+
+    email = str(decoded_token.get('email') or '').strip().lower()
+    assignments = load_assignments()
+    assigned_id = str(assignments.get(email) or '').strip()
+    if not email or not assigned_id.isdigit():
+        return jsonify({'status': 'error', 'message': '参加者IDが割り当てられていません。'}), 403
+
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'status': 'error', 'message': '回答データが不正です。'}), 400
+
+    if str(data.get('participantId') or '').strip() != assigned_id:
+        return jsonify({'status': 'error', 'message': '参加者IDがログイン情報と一致しません。'}), 403
+
+    try:
+        participant_id_number = int(assigned_id)
+    except ValueError:
+        return jsonify({'status': 'error', 'message': '参加者IDが不正です。'}), 403
+
+    condition_info = get_participant_condition(participant_id_number)
+    if not condition_info:
+        return jsonify({'status': 'error', 'message': '参加者IDの条件を確認できません。'}), 403
+
+    learn_type, answer_type = condition_info
+    data['participantId'] = assigned_id
+    data['learnType'] = learn_type
+    data['answerType'] = answer_type
+    data['condition'] = f'{learn_type}_learn_{answer_type}_answer'
+    data['displayName'] = first_display_name_character(
+        decoded_token.get('name') or decoded_token.get('displayName')
+    )
+
+    if not isinstance(data.get('questions', []), list):
+        return jsonify({'status': 'error', 'message': '回答データが不正です。'}), 400
 
     filename = 'results.json'
 
@@ -584,6 +635,7 @@ def submit():
 
 
 @app.get('/results')
+@admin_required
 def get_results():
     filename = 'results.json'
     if os.path.exists(filename):
@@ -594,6 +646,7 @@ def get_results():
 
 
 @app.route('/download_csv')
+@admin_required
 def download_csv():
     filename = 'results.json'
     if not os.path.exists(filename):

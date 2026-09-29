@@ -1,4 +1,30 @@
-'use strict';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: 'AIzaSyC5i2GrXI1CF33SON2TZPAn7qT4SuG28xc',
+  authDomain: 'k-arp-79th-78team-c140d.firebaseapp.com',
+  projectId: 'k-arp-79th-78team-c140d',
+  storageBucket: 'k-arp-79th-78team-c140d.firebasestorage.app',
+  messagingSenderId: '903991667651',
+  appId: '1:903991667651:web:ce3c14fa655fd234062b76'
+};
+
+const auth = getAuth(initializeApp(firebaseConfig));
+
+function getAuthenticatedUser() {
+  return new Promise((resolve, reject) => {
+    let unsubscribe = () => {};
+    unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        unsubscribe();
+        resolve(user);
+      },
+      reject
+    );
+  });
+}
 
 const MIN_PID = 1;
 const MAX_PID = 900;
@@ -353,7 +379,7 @@ function setupChoiceHandlers() {
   });
 }
 
-function finishSession() {
+async function finishSession() {
   if (!participantId || !learnType || !answerType) {
     alert('参加者情報が不足しています。ページをリロードしてください。');
     return;
@@ -377,25 +403,32 @@ function finishSession() {
     timestamp: new Date().toISOString()
   };
 
-  fetch(getApiUrl('/submit'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`送信に失敗しました: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(() => {
-      window.location.assign(getAppUrl('/finish'));
-    })
-    .catch((error) => {
-      console.error(`送信エラー: ${error.message || error}`);
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      throw new Error('ログイン状態を確認できません。再度ログインしてください。');
+    }
+
+    const idToken = await user.getIdToken();
+    const response = await fetch(getApiUrl('/submit'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${idToken}`
+      },
+      body: JSON.stringify(payload)
     });
+
+    if (!response.ok) {
+      const result = await response.json();
+      throw new Error(result.message || `送信に失敗しました: ${response.status}`);
+    }
+
+    window.location.assign(getAppUrl('/finish'));
+  } catch (error) {
+    console.error(`送信エラー: ${error.message || error}`);
+    alert(error.message || '回答の送信に失敗しました。');
+  }
 }
 
 function parsePidFromUrl() {
