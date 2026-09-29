@@ -115,6 +115,33 @@ def test_submit_truncates_display_name_from_firebase_token(tmp_path, monkeypatch
     assert sheet_records[0]['displayName'] == '佐'
 
 
+def test_append_to_sheet_writes_values_in_header_order(monkeypatch):
+    class DummySheet:
+        def append_row(self, row):
+            self.row = row
+
+    sheet = DummySheet()
+    monkeypatch.setattr(app, 'get_sheet', lambda: sheet)
+
+    result = app.append_to_sheet({
+        'participantId': '123',
+        'displayName': '山田太郎',
+        'learnType': 'analog',
+        'answerType': 'digital',
+        'condition': 'analog_learn_digital_answer',
+        'totalTimeSec': 12.5,
+        'totalCorrect': 3,
+        'timestamp': '2026-09-29T00:00:00Z',
+        'questions': [],
+    })
+
+    assert result is True
+    assert sheet.row == [
+        '123', '山', 'analog', 'digital', 'analog_learn_digital_answer',
+        12.5, 3, '2026-09-29T00:00:00Z', '[]'
+    ]
+
+
 def test_download_csv_includes_display_name_after_participant_id(tmp_path, monkeypatch):
     payload = [{
         'participantId': '123',
