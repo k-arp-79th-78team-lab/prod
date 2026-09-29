@@ -205,12 +205,14 @@ input#pid {
 
 .answer-page .choicebox {
   min-width: 0;
-  justify-content: center;
+  width: 100%;
+  justify-content: flex-end;
   padding: 3px 6px;
   line-height: 1.2;
 }
 
 .answer-page .choiceText {
+  text-align: right;
   white-space: normal;
   overflow-wrap: anywhere;
 }
