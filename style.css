@@ -144,6 +144,112 @@ input#pid {
   border: 0;
 }
 
+.answer-page {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.answer-page .content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.answer-page .site-footer {
+  position: static;
+}
+
+.answer-page.quiz-active .content {
+  padding: 12px 16px;
+}
+
+.answer-page.quiz-active .content h1,
+.answer-page.quiz-active #condition-status,
+.answer-page.quiz-active .content > p:not(#condition-status) {
+  display: none;
+}
+
+.answer-page #quiz:not(.hidden) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.answer-page .question-block {
+  min-width: 0;
+  min-height: 0;
+  margin-top: 0;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.answer-page .question-block h3 {
+  margin-bottom: 4px;
+}
+
+.answer-page .choices-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.answer-page .choicebox {
+  min-width: 0;
+  padding: 3px 6px;
+  line-height: 1.2;
+}
+
+.answer-page .choiceText {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.answer-page.quiz-active #finish {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-top: 8px;
+  padding: 8px 18px;
+}
+
+@media (max-height: 500px) {
+  .answer-page .content {
+    padding: 6px 12px;
+  }
+
+  .answer-page #quiz:not(.hidden) {
+    gap: 4px;
+  }
+
+  .answer-page .question-block {
+    padding: 4px 6px;
+  }
+
+  .answer-page .question-block h3 {
+    margin-bottom: 2px;
+    font-size: 0.82rem;
+  }
+
+  .answer-page .choicebox {
+    padding: 2px 4px;
+    font-size: 0.82rem;
+  }
+
+  .answer-page.quiz-active #finish {
+    margin-top: 4px;
+    padding: 3px 12px;
+  }
+}
+
 @media (max-width: 760px) {
   .choices-row {
     flex-direction: column;

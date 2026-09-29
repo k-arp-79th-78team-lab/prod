@@ -146,6 +146,7 @@ function setVisible(element, visible) {
 }
 
 function showState(stateName) {
+  document.body.classList.toggle('quiz-active', stateName === 'quiz');
   setVisible(pidInputArea, stateName === 'pid');
   setVisible(startButton, stateName === 'start');
   setVisible(quizDiv, stateName === 'quiz');
