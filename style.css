@@ -186,6 +186,8 @@ input#pid {
 }
 
 .answer-page .question-block {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   margin-top: 0;
@@ -201,18 +203,20 @@ input#pid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
+  flex: 1;
+  min-height: 0;
 }
 
 .answer-page .choicebox {
   min-width: 0;
   width: 100%;
-  justify-content: flex-end;
+  justify-content: flex-start;
   padding: 3px 6px;
   line-height: 1.2;
 }
 
 .answer-page .choiceText {
-  text-align: right;
+  text-align: left;
   white-space: normal;
   overflow-wrap: anywhere;
 }

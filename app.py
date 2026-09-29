@@ -356,9 +356,8 @@ def append_to_sheet(data):
             first_display_name_character(data.get('displayName')),
             data.get('learnType', ''),
             data.get('answerType', ''),
-            data.get('condition', ''),
-            data.get('totalTimeSec', ''),
             data.get('totalCorrect', ''),
+            data.get('totalTimeSec', ''),
             data.get('timestamp', ''),
             json.dumps(data.get('questions', []), ensure_ascii=False)
         ]
