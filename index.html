@@ -66,6 +66,7 @@
 
         registrationPromise = (async () => {
             try {
+                const displayName = Array.from((user.displayName || '').trim())[0] || '';
                 const idToken = await user.getIdToken(true);
                 const response = await fetch(apiUrl('/register-account'), {
                         method: 'POST',
@@ -73,7 +74,7 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${idToken}`
                         },
-                        body: JSON.stringify({ displayName: user.displayName || '' })
+                        body: JSON.stringify({ displayName })
                     });
 
                 const payload = await response.json();
@@ -81,8 +82,8 @@
                     throw new Error(`HTTP ${response.status}: ${payload.message || '登録に失敗しました。'}`);
                 }
 
-                localStorage.setItem('googleDisplayName', user.displayName || '');
-                console.log('Google login successful', user.displayName);
+                localStorage.setItem('googleDisplayName', displayName);
+                console.log('Google login successful');
                 const successUrl = new URL('login-success.html', document.baseURI);
                 if (payload.participantId) {
                     successUrl.searchParams.set('pid', payload.participantId);

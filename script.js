@@ -363,7 +363,8 @@ function finishSession() {
     testStart = Date.now();
   }
 
-  const displayName = (localStorage.getItem('googleDisplayName') || '').trim();
+  const displayName = Array.from((localStorage.getItem('googleDisplayName') || '').trim())[0] || '';
+  localStorage.setItem('googleDisplayName', displayName);
   const payload = {
     participantId,
     displayName,

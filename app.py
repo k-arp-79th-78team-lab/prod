@@ -34,6 +34,20 @@ REGISTERED_ACCOUNTS_FILE = 'registered_accounts.json'
 firebase_app = None
 
 
+def first_display_name_character(value):
+    """表示名の先頭1文字だけを返します。"""
+    return next(iter(str(value or '').strip()), '')
+
+
+def sanitize_result_records(records):
+    """回答記録に含まれる表示名を先頭1文字に制限します。"""
+    if isinstance(records, list):
+        for record in records:
+            if isinstance(record, dict):
+                record['displayName'] = first_display_name_character(record.get('displayName'))
+    return records
+
+
 def get_firestore_client():
     """Firestore クライアントを返します。初期化できない場合は None を返します。"""
     try:
@@ -107,9 +121,15 @@ def load_registered_accounts():
                 email = str(data.get('email') or document.id or '').strip().lower()
                 if not email:
                     continue
+                display_name = first_display_name_character(data.get('displayName'))
+                if display_name != str(data.get('displayName') or '').strip():
+                    try:
+                        document.reference.update({'displayName': display_name})
+                    except Exception as error:
+                        print(f'Firestore表示名短縮エラー: {error}')
                 accounts.append({
                     'email': email,
-                    'displayName': str(data.get('displayName') or '').strip()
+                    'displayName': display_name
                 })
             return filter_registered_accounts(accounts)
         except Exception as error:
@@ -130,8 +150,15 @@ def load_registered_accounts():
                 elif isinstance(item, dict) and item.get('email'):
                     accounts.append({
                         'email': item['email'].strip().lower(),
-                        'displayName': (item.get('displayName') or '').strip()
+                        'displayName': first_display_name_character(item.get('displayName'))
                     })
+            if any(
+                isinstance(item, dict)
+                and str(item.get('displayName') or '').strip() != first_display_name_character(item.get('displayName'))
+                for item in data
+            ):
+                with open(REGISTERED_ACCOUNTS_FILE, 'w', encoding='utf-8') as handle:
+                    json.dump(accounts, handle, ensure_ascii=False, indent=2)
             return filter_registered_accounts(accounts)
     except Exception as error:
         print(f'登録アカウント読み込みエラー: {error}')
@@ -148,7 +175,7 @@ def save_registered_accounts(accounts):
                 document.reference.delete()
             for account in accounts:
                 email = str(account.get('email') or '').strip().lower()
-                display_name = str(account.get('displayName') or '').strip()
+                display_name = first_display_name_character(account.get('displayName'))
                 if not email:
                     continue
                 collection.document(email).set({
@@ -159,8 +186,15 @@ def save_registered_accounts(accounts):
         except Exception as error:
             print(f'Firestore登録アカウント保存エラー: {error}')
 
+    sanitized_accounts = [
+        {
+            **account,
+            'displayName': first_display_name_character(account.get('displayName'))
+        }
+        for account in accounts
+    ]
     with open(REGISTERED_ACCOUNTS_FILE, 'w', encoding='utf-8') as handle:
-        json.dump(accounts, handle, ensure_ascii=False, indent=2)
+        json.dump(sanitized_accounts, handle, ensure_ascii=False, indent=2)
 
 
 def is_admin_email(email):
@@ -189,7 +223,7 @@ def filter_registered_accounts(accounts):
             display_name = ''
         elif isinstance(item, dict) and item.get('email'):
             email = str(item.get('email')).strip().lower()
-            display_name = str(item.get('displayName') or '').strip()
+            display_name = first_display_name_character(item.get('displayName'))
         else:
             continue
 
@@ -319,7 +353,7 @@ def append_to_sheet(data):
 
         row = [
             data.get('participantId', ''),
-            data.get('displayName', ''),
+            first_display_name_character(data.get('displayName')),
             data.get('learnType', ''),
             data.get('answerType', ''),
             data.get('totalCorrect', ''),
@@ -381,7 +415,7 @@ def register_account():
 
     data = request.get_json(silent=True) or {}
     email = (decoded_token.get('email') or '').strip().lower()
-    display_name = (decoded_token.get('name') or data.get('displayName') or '').strip()
+    display_name = first_display_name_character(decoded_token.get('name') or data.get('displayName'))
 
     if not email:
         return jsonify({'status': 'error', 'message': 'メールアドレスが必要です。'}), 400
@@ -520,18 +554,20 @@ def reset_assignments():
 @app.post('/submit')
 def submit():
     data = dict(request.get_json(silent=True) or {})
-    display_name = str(data.get('displayName') or '').strip()
+    display_name = first_display_name_character(data.get('displayName'))
     if not display_name:
         decoded_token = verify_id_token()
         if decoded_token:
-            display_name = str(decoded_token.get('name') or decoded_token.get('displayName') or '').strip()
+            display_name = first_display_name_character(
+                decoded_token.get('name') or decoded_token.get('displayName')
+            )
     data['displayName'] = display_name
 
     filename = 'results.json'
 
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as f:
-            existing_data = json.load(f)
+            existing_data = sanitize_result_records(json.load(f))
     else:
         existing_data = []
 
@@ -552,7 +588,7 @@ def get_results():
     filename = 'results.json'
     if os.path.exists(filename):
         with open(filename, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            data = sanitize_result_records(json.load(f))
         return jsonify(data)
     return jsonify([])
 
@@ -564,7 +600,7 @@ def download_csv():
         return 'No data', 404
 
     with open(filename, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+        data = sanitize_result_records(json.load(f))
 
     output = StringIO()
     writer = csv_writer(output)
@@ -578,7 +614,7 @@ def download_csv():
         for question in entry.get('questions', []):
             writer.writerow([
                 entry.get('participantId', ''),
-                entry.get('displayName', ''),
+                first_display_name_character(entry.get('displayName')),
                 entry.get('learnType', ''),
                 entry.get('answerType', ''),
                 entry.get('condition', ''),
