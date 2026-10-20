@@ -18,6 +18,7 @@
       <p>参加者IDの割り当て状況を確認し、必要に応じてリセットできます。</p>
       <button id="refresh-status" class="big-button" type="button">状態を更新</button>
       <button id="assign-ids" class="big-button" type="button">IDをランダム割り当て</button>
+      <button id="shuffle-choices" class="big-button" type="button">選択肢をシャッフルする</button>
       <button id="reset-assignments" class="big-button" type="button">登録・割り当てをリセット</button>
       <div style="margin-top: 24px;">
         <h2>手動割り当て</h2>
@@ -89,6 +90,7 @@
     adminLogout.addEventListener('click', () => signOut(auth));
     document.getElementById('refresh-status').addEventListener('click', () => loadAdminData().catch((error) => alert(error.message)));
     document.getElementById('assign-ids').addEventListener('click', () => runAdminAction('/admin/assign-ids', '登録済みアカウントへIDを均等に割り当てますか？', 'IDを割り当てました。').catch((error) => alert(error.message)));
+    document.getElementById('shuffle-choices').addEventListener('click', () => runAdminAction('/admin/shuffle-choices', '全参加者向けの選択肢の並びをシャッフルしますか？', '選択肢をシャッフルしました。').catch((error) => alert(error.message)));
     document.getElementById('reset-assignments').addEventListener('click', () => runAdminAction('/admin/reset-assignments', '登録・割り当て情報をリセットしますか？', '登録・割り当て情報をリセットしました。').catch((error) => alert(error.message)));
     document.getElementById('manual-assign').addEventListener('click', async () => {
       const email = document.getElementById('manual-email').value.trim().toLowerCase();

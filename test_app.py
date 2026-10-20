@@ -176,6 +176,34 @@ def test_results_requires_admin_auth(tmp_path, monkeypatch):
     assert response.get_json() == []
 
 
+def test_choice_settings_use_fixed_options_until_admin_shuffles(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app, 'get_firestore_client', lambda: None)
+    client = app.app.test_client()
+
+    initial_response = client.get('/choice-settings')
+    assert initial_response.status_code == 200
+    assert initial_response.get_json() == {'shuffleSeed': 'fixed'}
+
+    monkeypatch.setattr(app, 'verify_id_token', lambda: {'admin': True})
+    shuffle_response = client.post('/admin/shuffle-choices')
+    assert shuffle_response.status_code == 200
+    seed = shuffle_response.get_json()['shuffleSeed']
+    assert seed != 'fixed'
+
+    settings_response = client.get('/choice-settings')
+    assert settings_response.status_code == 200
+    assert settings_response.get_json() == {'shuffleSeed': seed}
+
+
+def test_shuffle_choices_requires_admin_auth(monkeypatch):
+    monkeypatch.setattr(app, 'verify_id_token', lambda: None)
+
+    response = app.app.test_client().post('/admin/shuffle-choices')
+
+    assert response.status_code == 401
+
+
 def test_append_to_sheet_preserves_original_columns(monkeypatch):
     class DummySheet:
         def append_row(self, row):

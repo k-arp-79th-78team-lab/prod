@@ -32,46 +32,31 @@ const QUESTIONS = [
   {
     id: 1,
     text: 'ex) a',
-    correct: '1' //ここで実際の問題文と正解を入れる
+    correct: '1', //ここで実際の問題文と正解を入れる
+    // 問題1の選択肢プール（正解を含める）
+    choicePool: ['1', '2', '3', '4', '5', '6', '7', '8']
   },
   {
     id: 2,
     text: 'ex) b',
-    correct: '2'
+    correct: '2',
+    // 問題2の選択肢プール（正解を含める）
+    choicePool: ['1', '2', '3', '4', '5', '6', '7', '8']
   },
   {
     id: 3,
     text: 'ex) c',
-    correct: '3'
+    correct: '3',
+    // 問題3の選択肢プール（正解を含める）
+    choicePool: ['1', '2', '3', '4', '5', '6', '7', '8']
   },
   {
     id: 4,
     text: 'ex) d',
-    correct: '4'
+    correct: '4',
+    // 問題4の選択肢プール（正解を含める）
+    choicePool: ['1', '2', '3', '4', '5', '6', '7', '8']
   }
-];
-
-const CHOICE_POOL = [
-  '1', //ここで実際の選択肢を入れる
-  '2',
-  '3',
-  '4',
-  '5',
-  '6',
-  '7',
-  '8',
-  '9',
-  '10',
-  '11',
-  '12',
-  '13',
-  '14',
-  '15',
-  '16',
-  '17',
-  '18',
-  '19',
-  '20'
 ];
 
 let participantId = null;
@@ -84,6 +69,7 @@ let startTimes = {};
 let testStart = null;
 let choiceHandlersBound = false;
 let pidIsComposing = false;
+let choiceShuffleSeed = 'fixed';
 
 let pidInputArea = null;
 let pidInput = null;
@@ -103,6 +89,15 @@ function getApiUrl(path) {
 
 function getAppUrl(path) {
   return new URL(path, document.baseURI).href;
+}
+
+async function loadChoiceShuffleSeed() {
+  const response = await fetch(getApiUrl('/choice-settings'));
+  const data = await response.json();
+  if (!response.ok || typeof data.shuffleSeed !== 'string' || !data.shuffleSeed) {
+    throw new Error(data.message || `選択肢設定を取得できませんでした: ${response.status}`);
+  }
+  return data.shuffleSeed;
 }
 
 function normalizePid(value) {
@@ -248,27 +243,37 @@ function bindPidSubmit() {
   });
 }
 
-function shuffle(array) {
+function shuffle(array, seed) {
   const copy = [...array];
+  let state = 2166136261;
+  for (const character of seed) {
+    state ^= character.charCodeAt(0);
+    state = Math.imul(state, 16777619);
+  }
+  if (state === 0) {
+    state = 1;
+  }
+
+  const random = () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return (state >>> 0) / 4294967296;
+  };
+
   for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
 }
 
-function generateChoices(correctLabel) {
-  const choices = [correctLabel];
-  const pool = CHOICE_POOL.filter((item) => item !== correctLabel);
-
-  while (choices.length < 4) {
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    if (!choices.includes(pick)) {
-      choices.push(pick);
-    }
-  }
-
-  return shuffle(choices);
+function generateChoices(question) {
+  const seed = `${choiceShuffleSeed}:${question.id}`;
+  const pool = [...new Set(question.choicePool)];
+  const distractors = shuffle(pool.filter((choice) => choice !== question.correct), `${seed}:pool`)
+    .slice(0, 3);
+  return shuffle([question.correct, ...distractors], `${seed}:order`);
 }
 
 function initializeQuiz() {
@@ -277,7 +282,7 @@ function initializeQuiz() {
     id: question.id,
     text: question.text,
     correct: question.correct,
-    choices: generateChoices(question.correct)
+    choices: generateChoices(question)
   }));
 }
 
@@ -451,7 +456,7 @@ function initPage() {
   }
 
   if (startButton) {
-    startButton.addEventListener('click', () => {
+    startButton.addEventListener('click', async () => {
       const pidFromUrl = parsePidFromUrl();
       if (pidFromUrl && setParticipantFromPid(pidFromUrl)) {
         participantId = normalizePid(pidFromUrl);
@@ -465,11 +470,18 @@ function initPage() {
 
       updateConditionStatus();
 
+      if (answerType === 'digital') {
+        try {
+          choiceShuffleSeed = await loadChoiceShuffleSeed();
+        } catch (error) {
+          alert(error.message || '選択肢設定を取得できませんでした。');
+          return;
+        }
+      }
+
       results = [];
       testStart = Date.now();
-      if (!quiz.length) {
-        initializeQuiz();
-      }
+      initializeQuiz();
 
       if (answerType === 'analog') {
         showState('finish');

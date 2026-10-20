@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import secrets
 from csv import writer as csv_writer
 from functools import wraps
 from io import StringIO
@@ -31,6 +32,7 @@ CORS(app, resources={r"/*": {"origins": [origin.strip() for origin in CORS_ORIGI
 
 ASSIGNMENTS_FILE = 'assignments.json'
 REGISTERED_ACCOUNTS_FILE = 'registered_accounts.json'
+CHOICE_SETTINGS_FILE = 'choice_settings.json'
 PUBLIC_STATIC_FILES = {
     'admin.html',
     'finish.html',
@@ -128,6 +130,45 @@ def save_assignments(assignments):
 
     with open(ASSIGNMENTS_FILE, 'w', encoding='utf-8') as handle:
         json.dump(assignments, handle, ensure_ascii=False, indent=2)
+
+
+def load_choice_shuffle_seed():
+    """選択肢のシャッフル状態を読み込みます。"""
+    client = get_firestore_client()
+    if client:
+        try:
+            document = client.collection('settings').document('choice_shuffle').get()
+            data = document.to_dict() or {}
+            seed = data.get('seed')
+            return seed if isinstance(seed, str) and seed else 'fixed'
+        except Exception as error:
+            print(f'選択肢設定読み込みエラー: {error}')
+
+    if not os.path.exists(CHOICE_SETTINGS_FILE):
+        return 'fixed'
+
+    try:
+        with open(CHOICE_SETTINGS_FILE, 'r', encoding='utf-8') as handle:
+            data = json.load(handle)
+            seed = data.get('seed') if isinstance(data, dict) else None
+            return seed if isinstance(seed, str) and seed else 'fixed'
+    except Exception as error:
+        print(f'選択肢設定読み込みエラー: {error}')
+        return 'fixed'
+
+
+def save_choice_shuffle_seed(seed):
+    """選択肢のシャッフル状態を保存します。"""
+    client = get_firestore_client()
+    if client:
+        try:
+            client.collection('settings').document('choice_shuffle').set({'seed': seed}, merge=True)
+            return
+        except Exception as error:
+            print(f'選択肢設定保存エラー: {error}')
+
+    with open(CHOICE_SETTINGS_FILE, 'w', encoding='utf-8') as handle:
+        json.dump({'seed': seed}, handle, ensure_ascii=False, indent=2)
 
 
 def load_registered_accounts():
@@ -494,6 +535,19 @@ def admin_accounts():
             for account in accounts
         ]
     })
+
+
+@app.get('/choice-settings')
+def choice_settings():
+    return jsonify({'shuffleSeed': load_choice_shuffle_seed()})
+
+
+@app.post('/admin/shuffle-choices')
+@admin_required
+def admin_shuffle_choices():
+    seed = secrets.token_hex(16)
+    save_choice_shuffle_seed(seed)
+    return jsonify({'status': 'ok', 'shuffleSeed': seed})
 
 
 @app.post('/admin/register-email')
