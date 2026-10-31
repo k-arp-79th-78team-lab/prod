@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/
 
 const firebaseConfig = {
   apiKey: 'AIzaSyC5i2GrXI1CF33SON2TZPAn7qT4SuG28xc',
-  authDomain: 'k-arp-79th-78team-c140d.firebaseapp.com',
+  authDomain: 'karp-79th-78team.com',
   projectId: 'k-arp-79th-78team-c140d',
   storageBucket: 'k-arp-79th-78team-c140d.firebasestorage.app',
   messagingSenderId: '903991667651',

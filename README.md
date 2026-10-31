@@ -74,6 +74,18 @@ Flask は Cloudflare Pages では実行できないため、Render をアプリ�
 
 HTML/JS/API はすべて同じ本番ドメインから提供するため、ログインや回答送信は相対 URL で動作します。Cloudflare 側では `/submit`、`/register-account`、`/admin/*` などの API をキャッシュしない設定にしてください。
 
+### Firebase 認証を独自ドメインで行う設定
+
+Firebase の認証ヘルパー（`/__/auth/*`）も `karp-79th-78team.com` 経由にするには、Cloudflare Worker でFirebaseへ透過プロキシします。Googleのアカウント入力画面は引き続きGoogleの画面です。
+
+1. Cloudflare Dashboard の Workers & Pages で Worker を作成し、`cloudflare/firebase-auth-proxy.js` の内容をデプロイします。
+2. 作成したWorkerにルート `karp-79th-78team.com/__/auth/*` を設定します。DNSレコードはCloudflareプロキシ（オレンジ雲）を有効にしてください。
+3. Firebase Console の Authentication 設定で、承認済みドメインに `karp-79th-78team.com` を追加します。
+4. Google Cloud Console の該当するOAuth 2.0 Webクライアントで、承認済みリダイレクトURIに `https://karp-79th-78team.com/__/auth/handler` を追加します。
+5. Workerがデプロイされ、ルートが有効になった後に、このアプリをデプロイします。Firebase Web設定の `authDomain` は同ドメインに設定済みです。
+
+Workerのルートは `/__/auth/*` だけに適用し、サイト本体やAPIのルートには割り当てないでください。ログイン前に `https://karp-79th-78team.com/__/auth/iframe` がFirebaseから応答することを確認してください。
+
 Cloudflare の DNS を使わず Render の URL を直接使う場合は、環境変数 `CORS_ORIGINS` に許可する URL をカンマ区切りで指定してください。
 
 # 実験概要
