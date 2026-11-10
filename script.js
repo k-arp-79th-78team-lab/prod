@@ -120,6 +120,7 @@ let startButton = null;
 let quizDiv = null;
 let finishButton = null;
 let conditionStatus = null;
+let orientationWarning = null;
 
 function getApiUrl(path) {
   const configuredBase = (window.__APP_API_BASE_URL__ || '').trim().replace(/\/$/, '');
@@ -214,6 +215,7 @@ function showState(stateName) {
   setVisible(startButton, stateName === 'start');
   setVisible(quizDiv, stateName === 'quiz');
   setVisible(finishButton, stateName === 'quiz' || stateName === 'finish');
+  setVisible(orientationWarning, stateName !== 'quiz' && stateName !== 'finish');
 
   if (stateName === 'pid') {
     pidInput?.focus();
@@ -490,6 +492,7 @@ function initPage() {
   quizDiv = document.getElementById('quiz');
   finishButton = document.getElementById('finish');
   conditionStatus = document.getElementById('condition-status');
+  orientationWarning = document.getElementById('orientation-warning');
 
   const hasPidFlow = Boolean(pidInputArea || pidInput || pidSubmit);
 
