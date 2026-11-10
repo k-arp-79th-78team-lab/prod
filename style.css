@@ -171,7 +171,8 @@ input#pid {
 
 .answer-page.quiz-active .content h1,
 .answer-page.quiz-active #condition-status,
-.answer-page.quiz-active .content > p:not(#condition-status) {
+.answer-page.quiz-active .content > p:not(#condition-status),
+.answer-page.quiz-active .content > h3 {
   display: none;
 }
 
