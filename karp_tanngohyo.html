@@ -24,21 +24,20 @@
     html,
     body {
       margin: 0;
-      min-height: 100%;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
     }
 
     body {
-      display: grid;
-      place-items: start center;
-      min-height: 100vh;
-      padding: 24px 0;
-      background: #f1f1f1;
+      background: #fff;
     }
 
     .page {
       position: relative;
-      width: min(499pt, 100vw);
-      aspect-ratio: 499 / 709;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       container-type: inline-size;
       background: #fff;
@@ -46,33 +45,33 @@
 
     .word-table {
       position: absolute;
-      top: 13.3992%;
-      height: 54.3018%;
+      top: 1.5%;
+      height: 97%;
       border-collapse: collapse;
       table-layout: fixed;
-      border: 0.2004cqw solid #000;
+      border: 1px solid #000;
       color: #000;
       font-family: "Karp Noto Sans JP", sans-serif;
-      font-size: 2.2044cqw;
+      font-size: clamp(12px, min(3.5vw, 3.5vh), 40px);
       font-weight: 400;
       text-align: center;
     }
 
     .word-table:first-of-type {
-      left: 14.5291%;
-      width: 31.6633%;
+      left: 1%;
+      width: 48%;
     }
 
     .word-table:last-of-type {
-      left: 53.507%;
-      width: 31.8637%;
+      left: 51%;
+      width: 48%;
     }
 
     .word-table td {
       height: 8.3333%;
       padding: 0;
-      border: 0.2004cqw solid #000;
-      line-height: 3.2064cqw;
+      border: 1px solid #000;
+      line-height: 1.25;
       white-space: nowrap;
     }
 
@@ -81,19 +80,39 @@
       body {
         width: 499pt;
         height: 709pt;
-        min-height: 0;
+        overflow: visible;
       }
 
       body {
         display: block;
-        padding: 0;
         background: #fff;
       }
 
       .page {
         width: 499pt;
         height: 709pt;
-        aspect-ratio: auto;
+      }
+
+      .word-table {
+        top: 13.3992%;
+        height: 54.3018%;
+        border-width: 0.2004cqw;
+        font-size: 2.2044cqw;
+      }
+
+      .word-table:first-of-type {
+        left: 14.5291%;
+        width: 31.6633%;
+      }
+
+      .word-table:last-of-type {
+        left: 53.507%;
+        width: 31.8637%;
+      }
+
+      .word-table td {
+        border-width: 0.2004cqw;
+        line-height: 3.2064cqw;
       }
     }
   </style>
