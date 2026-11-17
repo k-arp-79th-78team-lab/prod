@@ -47,8 +47,8 @@
       position: absolute;
       top: 1.5%;
       height: 97%;
-      border-collapse: collapse;
-      table-layout: fixed;
+      display: grid;
+      grid-template-rows: minmax(0, 1fr);
       border: 1px solid #000;
       color: #000;
       font-family: "Karp Noto Sans JP", sans-serif;
@@ -67,12 +67,36 @@
       width: 48%;
     }
 
+    .word-table tbody {
+      display: grid;
+      grid-template-rows: repeat(12, minmax(0, 1fr));
+      min-height: 0;
+    }
+
+    .word-table tr {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      min-height: 0;
+    }
+
     .word-table td {
-      height: 8.3333%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
       padding: 0;
-      border: 1px solid #000;
+      border-right: 1px solid #000;
+      border-bottom: 1px solid #000;
       line-height: 1.25;
       white-space: nowrap;
+    }
+
+    .word-table td:last-child {
+      border-right: 0;
+    }
+
+    .word-table tr:last-child td {
+      border-bottom: 0;
     }
 
     @media print {
@@ -94,10 +118,41 @@
       }
 
       .word-table {
+        display: table;
+        border-collapse: collapse;
+        table-layout: fixed;
         top: 13.3992%;
         height: 54.3018%;
         border-width: 0.2004cqw;
         font-size: 2.2044cqw;
+      }
+
+      .word-table tbody {
+        display: table-row-group;
+        grid-template-rows: none;
+        min-height: 0;
+      }
+
+      .word-table tr {
+        display: table-row;
+        grid-template-columns: none;
+        min-height: 0;
+      }
+
+      .word-table td {
+        display: table-cell;
+        height: 8.3333%;
+        border: 0.2004cqw solid #000;
+        line-height: 3.2064cqw;
+        vertical-align: middle;
+      }
+
+      .word-table td:last-child {
+        border-right-width: 0.2004cqw;
+      }
+
+      .word-table tr:last-child td {
+        border-bottom-width: 0.2004cqw;
       }
 
       .word-table:first-of-type {
@@ -119,36 +174,36 @@
 </head>
 <body>
   <main class="page" aria-label="単語表">
-    <table class="word-table" aria-label="単語表 1">
-      <tbody>
-        <tr><td>開ける</td><td>リムロン</td></tr>
-        <tr><td>眼鏡</td><td>ガルペク</td></tr>
-        <tr><td>太陽</td><td>ポラム</td></tr>
-        <tr><td>邪魔する</td><td>ヴォタナロン</td></tr>
-        <tr><td>走る</td><td>メボロン</td></tr>
-        <tr><td>助ける</td><td>タナロン</td></tr>
-        <tr><td>歩く</td><td>ゲネロン</td></tr>
-        <tr><td>理解する</td><td>ラポロン</td></tr>
-        <tr><td>食べる</td><td>テルロン</td></tr>
-        <tr><td>雨</td><td>ベルカ</td></tr>
-        <tr><td>破壊する</td><td>ヴォピロロン</td></tr>
-        <tr><td>作る</td><td>ピロロン</td></tr>
+    <table class="word-table" role="table" aria-label="単語表 1">
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell">開ける</td><td role="cell">リムロン</td></tr>
+        <tr role="row"><td role="cell">眼鏡</td><td role="cell">ガルペク</td></tr>
+        <tr role="row"><td role="cell">太陽</td><td role="cell">ポラム</td></tr>
+        <tr role="row"><td role="cell">邪魔する</td><td role="cell">ヴォタナロン</td></tr>
+        <tr role="row"><td role="cell">走る</td><td role="cell">メボロン</td></tr>
+        <tr role="row"><td role="cell">助ける</td><td role="cell">タナロン</td></tr>
+        <tr role="row"><td role="cell">歩く</td><td role="cell">ゲネロン</td></tr>
+        <tr role="row"><td role="cell">理解する</td><td role="cell">ラポロン</td></tr>
+        <tr role="row"><td role="cell">食べる</td><td role="cell">テルロン</td></tr>
+        <tr role="row"><td role="cell">雨</td><td role="cell">ベルカ</td></tr>
+        <tr role="row"><td role="cell">破壊する</td><td role="cell">ヴォピロロン</td></tr>
+        <tr role="row"><td role="cell">作る</td><td role="cell">ピロロン</td></tr>
       </tbody>
     </table>
-    <table class="word-table" aria-label="単語表 2">
-      <tbody>
-        <tr><td>食事</td><td>テルサモ</td></tr>
-        <tr><td>見る</td><td>ガルロン</td></tr>
-        <tr><td>散歩</td><td>ゲネサモ</td></tr>
-        <tr><td>誤解する</td><td>ヴォラポロン</td></tr>
-        <tr><td>客</td><td>バノペク</td></tr>
-        <tr><td>鍵</td><td>リムペク</td></tr>
-        <tr><td>買う</td><td>バノロン</td></tr>
-        <tr><td>笑顔</td><td>キネサモ</td></tr>
-        <tr><td>木漏れ日</td><td>ポラムティ</td></tr>
-        <tr><td>寝る</td><td>パニロン</td></tr>
-        <tr><td>笑う</td><td>キネロン</td></tr>
-        <tr><td>ランナー</td><td>メボペク</td></tr>
+    <table class="word-table" role="table" aria-label="単語表 2">
+      <tbody role="rowgroup">
+        <tr role="row"><td role="cell">食事</td><td role="cell">テルサモ</td></tr>
+        <tr role="row"><td role="cell">見る</td><td role="cell">ガルロン</td></tr>
+        <tr role="row"><td role="cell">散歩</td><td role="cell">ゲネサモ</td></tr>
+        <tr role="row"><td role="cell">誤解する</td><td role="cell">ヴォラポロン</td></tr>
+        <tr role="row"><td role="cell">客</td><td role="cell">バノペク</td></tr>
+        <tr role="row"><td role="cell">鍵</td><td role="cell">リムペク</td></tr>
+        <tr role="row"><td role="cell">買う</td><td role="cell">バノロン</td></tr>
+        <tr role="row"><td role="cell">笑顔</td><td role="cell">キネサモ</td></tr>
+        <tr role="row"><td role="cell">木漏れ日</td><td role="cell">ポラムティ</td></tr>
+        <tr role="row"><td role="cell">寝る</td><td role="cell">パニロン</td></tr>
+        <tr role="row"><td role="cell">笑う</td><td role="cell">キネロン</td></tr>
+        <tr role="row"><td role="cell">ランナー</td><td role="cell">メボペク</td></tr>
       </tbody>
     </table>
   </main>
